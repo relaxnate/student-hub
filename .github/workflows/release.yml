@@ -1,0 +1,53 @@
+name: Release
+
+# Triggered when you push a version tag (e.g. v1.0.0). The `release:*` npm
+# scripts create and push that tag for you, so cutting a release is one command.
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write   # needed to create the GitHub Release and upload installers
+
+jobs:
+  release-windows:
+    # windows-latest is the recommended runner for building Windows Electron
+    # installers (NSIS + portable). Native modules (better-sqlite3) are rebuilt
+    # for Electron's ABI by the `postinstall` electron-rebuild hook during
+    # `npm ci`, then electron-builder's own rebuild step verifies them.
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20          # matches the project's engines + Electron 28 toolchain
+          cache: npm
+
+      # `npm ci` (not `npm install`) for CI: it installs exactly from
+      # package-lock.json for reproducible builds, and runs the `postinstall`
+      # electron-rebuild for better-sqlite3.
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build main + preload + renderer (electron-vite)
+        run: npm run build
+
+      - name: Package Windows installers + publish to GitHub Release
+        env:
+          # Auto-provided by Actions; electron-builder uses it to create the
+          # Release and upload artifacts + latest.yml (the auto-update feed).
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # ── CODE SIGNING (add later) ─────────────────────────────────────
+          # To sign the Windows build, add repo secrets CSC_LINK (base64 of your
+          # .pfx) and CSC_KEY_PASSWORD, then uncomment:
+          # CSC_LINK: ${{ secrets.CSC_LINK }}
+          # CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          # electron-builder picks these up automatically and signs the NSIS
+          # installer + the app, removing the SmartScreen "unknown publisher"
+          # warning. No code change needed.
+        run: npx electron-builder --win --x64 --publish always
