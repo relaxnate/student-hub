@@ -1,0 +1,6 @@
+# Lets electron-updater run in a non-packaged build for testing.
+# Used only when FORCE_UPDATE_CHECK=1 is set (see UpdaterService.canRun()).
+# Replace owner/repo with your real GitHub repo.
+owner: relaxnate
+repo: student-hub
+provider: github

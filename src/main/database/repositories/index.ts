@@ -1,0 +1,8 @@
+export { CourseRepository } from './CourseRepository'
+export { ModuleRepository, ModuleItemRepository } from './ModuleRepository'
+export { AssignmentRepository, GradeRepository } from './AssignmentRepository'
+export { AssignmentGroupRepository } from './AssignmentGroupRepository'
+export { FileRepository } from './FileRepository'
+export { PageRepository } from './PageRepository'
+export { QuizRepository } from './QuizRepository'
+export { WhatIfScoreRepository } from './WhatIfScoreRepository'

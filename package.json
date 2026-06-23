@@ -1,0 +1,160 @@
+{
+  "name": "student-hub",
+  "version": "0.1.0",
+  "description": "Production-grade student productivity desktop application",
+  "author": "Student Hub <ghoulredrugs@gmail.com>",
+  "main": "out/main/index.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/relaxnate/student-hub.git"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=9.0.0"
+  },
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "preview": "electron-vite preview",
+    "build:win": "npm run build && electron-builder --win --x64",
+    "build:mac": "npm run build && electron-builder --mac",
+    "build:linux": "npm run build && electron-builder --linux",
+    "build:unpack": "npm run build && electron-builder --dir",
+    "publish:win": "npm run build && electron-builder --win --x64 --publish always",
+    "rebuild": "electron-rebuild -f -w better-sqlite3",
+    "postinstall": "electron-rebuild -f -w better-sqlite3",
+    "typecheck:node": "tsc --project tsconfig.node.json --noEmit",
+    "typecheck:web": "tsc --project tsconfig.web.json --noEmit",
+    "typecheck": "npm run typecheck:node && npm run typecheck:web",
+    "release:patch": "npm version patch -m \"release: v%s\" && git push --follow-tags",
+    "release:minor": "npm version minor -m \"release: v%s\" && git push --follow-tags",
+    "release:major": "npm version major -m \"release: v%s\" && git push --follow-tags"
+  },
+  "dependencies": {
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
+    "@electron-toolkit/utils": "^3.0.0",
+    "better-sqlite3": "^11.7.0",
+    "date-fns": "^3.3.1",
+    "electron-updater": "^6.1.7"
+  },
+  "devDependencies": {
+    "@electron-toolkit/preload": "^3.0.1",
+    "@electron/rebuild": "^3.6.0",
+    "@tanstack/react-query": "^5.24.1",
+    "@tanstack/react-query-devtools": "^5.24.1",
+    "@types/better-sqlite3": "^7.6.12",
+    "@types/node": "^20.11.20",
+    "@types/react": "^18.2.61",
+    "@types/react-dom": "^18.2.19",
+    "@vitejs/plugin-react": "^4.2.1",
+    "autoprefixer": "^10.4.18",
+    "clsx": "^2.1.0",
+    "electron": "^28.3.0",
+    "electron-builder": "^24.9.1",
+    "electron-vite": "^2.1.0",
+    "framer-motion": "^11.0.6",
+    "lucide-react": "^0.323.0",
+    "postcss": "^8.4.35",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.22.2",
+    "tailwind-merge": "^2.2.1",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5.3.3",
+    "vite": "^5.1.4",
+    "zustand": "^4.5.1"
+  },
+  "build": {
+    "appId": "com.studenthub.app",
+    "productName": "Student Hub",
+    "copyright": "Copyright © 2026 Student Hub",
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "relaxnate",
+        "repo": "student-hub",
+        "releaseType": "release"
+      }
+    ],
+    "directories": {
+      "buildResources": "build",
+      "output": "dist"
+    },
+    "files": [
+      "out/**/*",
+      "node_modules/better-sqlite3/**/*",
+      "node_modules/bindings/**/*",
+      "node_modules/file-uri-to-path/**/*",
+      "node_modules/@electron-toolkit/utils/**/*",
+      "node_modules/date-fns/**/*",
+      "node_modules/electron-updater/**/*"
+    ],
+    "asarUnpack": [
+      "node_modules/better-sqlite3/**/*",
+      "node_modules/bindings/**/*",
+      "node_modules/file-uri-to-path/**/*"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico"
+    },
+    "portable": {
+      "artifactName": "StudentHub-Portable-${version}.exe"
+    },
+    "nsis": {
+      "artifactName": "StudentHub-Setup-${version}.exe",
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Student Hub",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "installerHeaderIcon": "build/icon.ico"
+    },
+    "mac": {
+      "category": "public.app-category.education",
+      "icon": "build/icon.icns",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ]
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Education",
+      "icon": "build/icons"
+    },
+    "protocols": [
+      {
+        "name": "Student Hub",
+        "schemes": [
+          "student-hub"
+        ]
+      }
+    ]
+  }
+}

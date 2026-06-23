@@ -1,0 +1,353 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ════════════════════════════════════════════════════════════════════════════
+   DESIGN TOKENS
+   Every themeable Tailwind color (accent / surface / zinc) and the corner-radius
+   scale resolve to these CSS variables. The appearance engine
+   (src/renderer/src/lib/appearance.ts) sets data-theme / data-corner / data-font
+   on <html> and may override --accent-* and --accent2 inline. Defaults below
+   keep the out-of-the-box dark theme pixel-identical to before this system.
+   ════════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* Built-in indigo accent ramp (used when no custom accent is chosen) */
+  --accent-50:  240 240 255;
+  --accent-100: 224 224 254;
+  --accent-200: 196 194 253;
+  --accent-300: 162 154 251;
+  --accent-400: 130 113 248;
+  --accent-500: 101 80 243;
+  --accent-600: 85 64 229;
+  --accent-700: 71 51 196;
+  --accent-800: 59 44 160;
+  --accent-900: 49 39 131;
+  --accent-950: 30 23 90;
+
+  /* Secondary accent → focus rings, selection, scrollbar hover */
+  --accent2: 99 102 241;
+
+  /* Built-in status ramps (exact Tailwind green/amber/red/blue). The appearance
+     engine overrides these inline when the user picks a custom status color. */
+  --green-50: 240 253 244; --green-100: 220 252 231; --green-200: 187 247 208;
+  --green-300: 134 239 172; --green-400: 74 222 128; --green-500: 34 197 94;
+  --green-600: 22 163 74; --green-700: 21 128 61; --green-800: 22 101 52;
+  --green-900: 20 83 45; --green-950: 5 46 22;
+
+  --amber-50: 255 251 235; --amber-100: 254 243 199; --amber-200: 253 230 138;
+  --amber-300: 252 211 77; --amber-400: 251 191 36; --amber-500: 245 158 11;
+  --amber-600: 217 119 6; --amber-700: 180 83 9; --amber-800: 146 64 14;
+  --amber-900: 120 53 15; --amber-950: 69 26 3;
+
+  --red-50: 254 242 242; --red-100: 254 226 226; --red-200: 254 202 202;
+  --red-300: 252 165 165; --red-400: 248 113 113; --red-500: 239 68 68;
+  --red-600: 220 38 38; --red-700: 185 28 28; --red-800: 153 27 27;
+  --red-900: 127 29 29; --red-950: 69 10 10;
+
+  --blue-50: 239 246 255; --blue-100: 219 234 254; --blue-200: 191 219 254;
+  --blue-300: 147 197 253; --blue-400: 96 165 250; --blue-500: 59 130 246;
+  --blue-600: 37 99 235; --blue-700: 29 78 216; --blue-800: 30 64 175;
+  --blue-900: 30 58 138; --blue-950: 23 37 84;
+
+  /* Corner radius scale (overridden per data-corner below) */
+  --r-default: 0.5rem;
+  --r-md:      0.375rem;
+  --r-lg:      0.5rem;
+  --r-xl:      0.75rem;
+  --r-2xl:     1rem;
+  --r-3xl:     1.5rem;
+
+  /* Active font stack (overridden per data-font below) */
+  --font-sans: 'Inter', system-ui, sans-serif;
+
+  /* Text rem multiplier */
+  --font-scale: 1;
+
+  /* Motion: global transition speed (default matches Tailwind's 150ms) */
+  --motion-duration: 150ms;
+
+  /* Layout: sidebar width (overridden per data-sidebar) */
+  --sidebar-width: 13rem;
+
+  /* Density: multiplies padding/gap/space utilities (overridden per data-density) */
+  --density-mult: 1;
+
+  /* Effects — shadow/glass vars written by applyAppearance per chosen preset */
+  --shadow:        0 1px 3px 0 rgb(0 0 0/0.18),0 1px 2px -1px rgb(0 0 0/0.18);
+  --shadow-lg:     0 4px 16px -2px rgb(0 0 0/0.3);
+  --shadow-sm:     0 1px 2px 0 rgb(0 0 0/0.1);
+  --glass-blur:    12px;
+  --glass-opacity: 0.08;
+}
+
+/* ─── Theme: Dark (default) ──────────────────────────────────────────────────── */
+:root,
+[data-theme='dark'] {
+  --surface-950: 8 8 12;
+  --surface-900: 14 14 20;
+  --surface-800: 22 22 31;
+  --surface-700: 30 30 42;
+  --surface-600: 38 38 53;
+  --surface-500: 50 50 74;
+
+  --zinc-50:  250 250 250;
+  --zinc-100: 244 244 245;
+  --zinc-200: 228 228 231;
+  --zinc-300: 212 212 216;
+  --zinc-400: 161 161 170;
+  --zinc-500: 113 113 122;
+  --zinc-600: 82 82 91;
+  --zinc-700: 63 63 70;
+  --zinc-800: 39 39 42;
+  --zinc-900: 24 24 27;
+  --zinc-950: 9 9 11;
+}
+
+/* ─── Theme: Light ───────────────────────────────────────────────────────────── */
+[data-theme='light'] {
+  --surface-950: 233 233 238;
+  --surface-900: 245 245 248;
+  --surface-800: 255 255 255;
+  --surface-700: 239 240 243;
+  --surface-600: 230 231 236;
+  --surface-500: 218 220 227;
+
+  /* Neutral scale inverted so existing text-zinc-100/200 (prominent) read dark
+     and text-zinc-500/600 (muted) read mid-gray on light backgrounds. */
+  --zinc-50:  9 9 11;
+  --zinc-100: 24 24 27;
+  --zinc-200: 39 39 42;
+  --zinc-300: 63 63 70;
+  --zinc-400: 82 82 91;
+  --zinc-500: 113 113 122;
+  --zinc-600: 130 130 140;
+  --zinc-700: 180 180 188;
+  --zinc-800: 212 212 216;
+  --zinc-900: 235 235 238;
+  --zinc-950: 248 248 250;
+}
+
+/* ─── Theme: True-Black OLED ─────────────────────────────────────────────────── */
+[data-theme='oled'] {
+  --surface-950: 0 0 0;
+  --surface-900: 0 0 0;
+  --surface-800: 10 10 12;
+  --surface-700: 18 18 20;
+  --surface-600: 26 26 29;
+  --surface-500: 36 36 40;
+
+  --zinc-50:  250 250 250;
+  --zinc-100: 244 244 245;
+  --zinc-200: 228 228 231;
+  --zinc-300: 212 212 216;
+  --zinc-400: 161 161 170;
+  --zinc-500: 113 113 122;
+  --zinc-600: 82 82 91;
+  --zinc-700: 63 63 70;
+  --zinc-800: 39 39 42;
+  --zinc-900: 24 24 27;
+  --zinc-950: 9 9 11;
+}
+
+/* ─── Corner styles ──────────────────────────────────────────────────────────── */
+[data-corner='sharp'] {
+  --r-default: 0;
+  --r-md:      0;
+  --r-lg:      0.125rem;
+  --r-xl:      0.125rem;
+  --r-2xl:     0.25rem;
+  --r-3xl:     0.25rem;
+}
+[data-corner='rounded'] {
+  --r-default: 0.5rem;
+  --r-md:      0.375rem;
+  --r-lg:      0.5rem;
+  --r-xl:      0.75rem;
+  --r-2xl:     1rem;
+  --r-3xl:     1.5rem;
+}
+[data-corner='extra'] {
+  --r-default: 0.75rem;
+  --r-md:      0.5rem;
+  --r-lg:      0.75rem;
+  --r-xl:      1rem;
+  --r-2xl:     1.25rem;
+  --r-3xl:     1.75rem;
+}
+
+/* ─── Font families ──────────────────────────────────────────────────────────── */
+[data-font='system']   { --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; }
+[data-font='sans']     { --font-sans: 'Inter', system-ui, sans-serif; }
+[data-font='mono']     { --font-sans: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace; }
+[data-font='dyslexic'] { --font-sans: 'OpenDyslexic', 'Comic Sans MS', 'Inter', system-ui, sans-serif; }
+
+/* ════════════════════════════════════════════════════════════════════════════
+   ACCESSIBILITY
+   ════════════════════════════════════════════════════════════════════════════ */
+
+/* ─── Contrast: raises legibility of muted text per theme ─────────────────────── */
+/* Dark & OLED — push muted neutrals brighter */
+[data-theme='dark'][data-contrast='increased'],
+[data-theme='oled'][data-contrast='increased'] {
+  --zinc-400: 184 184 194;
+  --zinc-500: 150 150 161;
+  --zinc-600: 122 122 133;
+}
+[data-theme='dark'][data-contrast='high'],
+[data-theme='oled'][data-contrast='high'] {
+  --zinc-200: 255 255 255;
+  --zinc-300: 248 248 250;
+  --zinc-400: 226 226 236;
+  --zinc-500: 200 200 212;
+  --zinc-600: 176 176 188;
+}
+/* Light — push muted neutrals darker */
+[data-theme='light'][data-contrast='increased'] {
+  --zinc-400: 92 92 102;
+  --zinc-500: 92 92 102;
+  --zinc-600: 110 110 122;
+}
+[data-theme='light'][data-contrast='high'] {
+  --zinc-200: 0 0 0;
+  --zinc-300: 24 24 27;
+  --zinc-400: 48 48 56;
+  --zinc-500: 56 56 64;
+  --zinc-600: 72 72 82;
+}
+/* High contrast also strengthens focus outlines */
+[data-contrast='high'] :focus-visible { outline-width: 3px; }
+
+/* ─── Reduced transparency: removes blur/translucency effects ─────────────────── */
+[data-reduce-transparency='true'] *,
+[data-reduce-transparency='true'] *::before,
+[data-reduce-transparency='true'] *::after {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* ─── Line spacing: affects reading-heavy content ────────────────────────────── */
+[data-line-spacing='relaxed'] p,
+[data-line-spacing='relaxed'] li,
+[data-line-spacing='relaxed'] .selectable { line-height: 1.85; }
+[data-line-spacing='loose'] p,
+[data-line-spacing='loose'] li,
+[data-line-spacing='loose'] .selectable { line-height: 2.15; }
+
+/* ─── Colorblind adjustment: SVG color-matrix filter over the whole app ───────── */
+/* Filter <defs> are rendered by <ColorblindFilters/> in App.tsx. */
+[data-colorblind='protanopia']   #root { filter: url(#cb-protanopia); }
+[data-colorblind='deuteranopia'] #root { filter: url(#cb-deuteranopia); }
+[data-colorblind='tritanopia']   #root { filter: url(#cb-tritanopia); }
+
+/* ════════════════════════════════════════════════════════════════════════════
+   MOTION
+   CSS transitions read --motion-duration (set per data-motion); Framer Motion
+   reads MotionConfig in App.tsx. "Disable animations" hard-stops everything.
+   ════════════════════════════════════════════════════════════════════════════ */
+/* Motion duration is written as an inline CSS var by applyAppearance, so
+   --motion-duration is already set on <html> at the right value. The data-motion
+   attribute is kept for any future CSS that needs to target the mode directly. */
+
+/* Override Tailwind's own transition utilities with the chosen speed. The
+   !important beats Tailwind's class-level specificity so the setting actually
+   applies — but we scope it to the transitions that have a property declared,
+   keeping it inert on elements that don't transition at all. */
+html .transition,
+html .transition-all,
+html .transition-colors,
+html .transition-opacity,
+html .transition-shadow,
+html .transition-transform {
+  transition-duration: var(--motion-duration) !important;
+}
+
+[data-animations='off'] *,
+[data-animations='off'] *::before,
+[data-animations='off'] *::after {
+  transition-duration: 0.001ms !important;
+  animation-duration:  0.001ms !important;
+  animation-iteration-count: 1 !important;
+  scroll-behavior: auto !important;
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   LAYOUT — sidebar width per mode (Sidebar.tsx adapts its content to the mode)
+   ════════════════════════════════════════════════════════════════════════════ */
+[data-sidebar='compact']  { --sidebar-width: 3.75rem; }
+[data-sidebar='standard'] { --sidebar-width: 13rem; }
+[data-sidebar='expanded'] { --sidebar-width: 16rem; }
+
+/* Density — compresses or relaxes padding/gap/space throughout the app */
+[data-density='comfortable'] { --density-mult: 1.18; }
+[data-density='balanced']    { --density-mult: 1; }
+[data-density='compact']     { --density-mult: 0.8; }
+
+/* ─── Base resets ────────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+
+html {
+  /* Reading-accessibility text scale — Tailwind's rem-based sizes scale with this */
+  font-size: calc(16px * var(--font-scale, 1));
+}
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+body {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: rgb(var(--surface-900));
+  color: rgb(var(--zinc-200));
+  user-select: none;  /* desktop app — no text selection by default */
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* Allow selection in content areas */
+.selectable, p, h1, h2, h3, h4, h5, h6, span, li, td, th, input, textarea {
+  user-select: text;
+}
+
+::selection {
+  background: rgb(var(--accent2) / 0.32);
+}
+
+/* ─── Custom scrollbars ────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: rgb(var(--zinc-500) / 0.35);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover { background: rgb(var(--accent2) / 0.55); }
+
+/* ─── Drag region for custom titlebar ─────────────────────────────────────── */
+.drag-region { -webkit-app-region: drag; }
+.no-drag     { -webkit-app-region: no-drag; }
+
+/* ─── Typography ─────────────────────────────────────────────────────────────── */
+@layer base {
+  h1 { @apply text-2xl font-semibold tracking-tight; }
+  h2 { @apply text-xl font-semibold tracking-tight; }
+  h3 { @apply text-base font-medium; }
+  h4 { @apply text-sm font-medium; }
+}
+
+/* ─── Focus rings (secondary-accent driven) ──────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid rgb(var(--accent2));
+  outline-offset: 2px;
+}
+
+/* ─── Framer Motion page transitions ─────────────────────────────────────────── */
+.page-wrapper {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+}
