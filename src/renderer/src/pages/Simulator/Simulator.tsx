@@ -1,7 +1,8 @@
 // Academic Outcome Simulator — premium feature (/simulator)
-// Two tabs:
-//   1. Multi-Scenario Simulator  — run up to 4 what-if scenarios side by side
-//   2. Ripple Effect Calculator  — single-assignment impact chain + GPA boosters
+// Three tabs:
+//   1. Ask          — natural-language questions about your grades
+//   2. Multi-Scenario — run up to 4 what-if scenarios side by side
+//   3. Ripple Effect — single-assignment impact chain + GPA boosters
 // Shares one load of every course's assignments/grades/groups (CourseBundle[]).
 
 import { useEffect, useState } from 'react'
@@ -17,6 +18,12 @@ import ScenarioSimulator from './ScenarioSimulator'
 import RippleCalculator from './RippleCalculator'
 
 type SimTab = 'ask' | 'scenarios' | 'ripple'
+
+const TABS: { id: SimTab; label: string; icon: React.ReactNode; desc: string }[] = [
+  { id: 'ask',       label: 'Ask',            icon: <MessageCircleQuestion size={14} />, desc: 'Ask in plain English — e.g. “What happens if I skip my next essay?”' },
+  { id: 'scenarios', label: 'Multi-Scenario', icon: <FlaskConical size={14} />,          desc: 'Build up to 4 what-if scenarios and compare their GPA outcomes side by side.' },
+  { id: 'ripple',    label: 'Ripple Effect',  icon: <GitBranch size={14} />,             desc: 'Pick one assignment and watch any score ripple through to your GPA.' },
+]
 
 export default function Simulator() {
   const [bundles, setBundles] = useState<CourseBundle[]>([])
@@ -55,27 +62,26 @@ export default function Simulator() {
 
   return (
     <div className="h-full overflow-y-auto">
-      <div className="max-w-5xl mx-auto px-6 py-6 space-y-5">
+      <div className="max-w-5xl mx-auto px-6 py-6 space-y-6">
         <SectionHeader
           title="Academic Outcome Simulator"
           subtitle="Model multiple what-if scenarios and trace how a single grade ripples through your GPA."
           action={<Badge variant="accent"><Sparkles size={10} className="mr-1" /> Premium</Badge>}
         />
 
-        {/* Tab switcher */}
-        <div className="flex rounded-lg border border-white/10 overflow-hidden w-fit">
-          {([
-            { id: 'ask',       label: 'Ask',            icon: <MessageCircleQuestion size={14} /> },
-            { id: 'scenarios', label: 'Multi-Scenario', icon: <FlaskConical size={14} /> },
-            { id: 'ripple',    label: 'Ripple Effect',  icon: <GitBranch size={14} /> },
-          ] as { id: SimTab; label: string; icon: React.ReactNode }[]).map(t => (
-            <button key={t.id} onClick={() => setTab(t.id)}
-              className={cn('flex items-center gap-2 px-4 py-2 text-sm transition-colors',
-                tab === t.id ? 'bg-accent-500/20 text-accent-400 font-medium'
-                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5')}>
-              {t.icon}{t.label}
-            </button>
-          ))}
+        {/* Tab switcher + active-tab description */}
+        <div className="space-y-2">
+          <div className="flex rounded-lg border border-white/10 overflow-hidden w-fit">
+            {TABS.map(t => (
+              <button key={t.id} onClick={() => setTab(t.id)}
+                className={cn('flex items-center gap-2 px-4 py-2 text-sm transition-colors',
+                  tab === t.id ? 'bg-accent-500/20 text-accent-400 font-medium'
+                    : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5')}>
+                {t.icon}{t.label}
+              </button>
+            ))}
+          </div>
+          <p className="text-xs text-zinc-500">{TABS.find(t => t.id === tab)!.desc}</p>
         </div>
 
         {bundles.length === 0 ? (
