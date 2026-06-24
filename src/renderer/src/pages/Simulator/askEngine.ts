@@ -22,6 +22,7 @@ export type AskAnswerKind = 'ripple' | 'fastest' | 'current-gpa' | 'unknown'
 export interface AskAnswer {
   kind:        AskAnswerKind
   headline:    string
+  recommendation?: string   // one concrete next action, shown as a highlighted line
   // ripple
   ripple?:        RippleResult
   groupContext?:  string
@@ -165,6 +166,26 @@ function rippleHeadline(r: RippleResult, verb: 'skip' | 'ace' | 'score'): string
   return `${lead}, ${courseMove}${gpaMove}. ${statusText}`
 }
 
+// A concrete next-action line tailored to the simulated outcome.
+function rippleRecommendation(r: RippleResult, verb: 'skip' | 'ace' | 'score'): string {
+  const cd = r.courseDelta ?? 0
+  const gd = r.semesterGpaDelta
+  if (verb === 'skip') {
+    return cd <= -1
+      ? `Don't skip it — submit whatever you have. A zero here costs about ${Math.abs(cd)}% on the course${gd ? ` and ${Math.abs(gd)} GPA points` : ''}.`
+      : `Low impact, but turning it in still keeps your record clean.`
+  }
+  if (verb === 'ace') {
+    return cd >= 1
+      ? `High leverage — acing this adds ~${cd}% to the course. Block focused time for it before the due date.`
+      : `Worth locking in, though it won't move your grade much.`
+  }
+  // explicit score
+  if (cd > 0) return `Hitting that score lifts the course ~${cd}% — a realistic target worth pushing for.`
+  if (cd < 0) return `That would pull the course down ~${Math.abs(cd)}%. Aim higher if you can.`
+  return `That keeps your course grade about where it is now.`
+}
+
 function groupContextFor(m: Match): string | undefined {
   if (!m.bundle.course.applyGroupWeights || !m.assignment.assignmentGroupId) return undefined
   const g = m.bundle.groups.find(gr => gr.id === m.assignment.assignmentGroupId)
@@ -199,7 +220,8 @@ export function parseQuestion(question: string, bundles: CourseBundle[]): AskAns
         .replace('this assignment', `“${matched.assignment.title}”`)
       return {
         kind: 'ripple',
-        headline: `${headline}`,
+        headline,
+        recommendation: rippleRecommendation(r, verb),
         ripple: r,
         groupContext: groupContextFor(matched),
       }
@@ -212,7 +234,14 @@ export function parseQuestion(question: string, bundles: CourseBundle[]): AskAns
     const headline = actions.length === 0
       ? 'Your active courses have no missing or low-scoring assignments left to recover — you’re maxed out.'
       : `The fastest way to raise your GPA: tackle these ${actions.length} item${actions.length !== 1 ? 's' : ''}. Completing #1 (“${actions[0].assignmentTitle}”) adds about +${actions[0].gpaGain.toFixed(2)} to your semester GPA.`
-    return { kind: 'fastest', headline, actions }
+    return {
+      kind: 'fastest',
+      headline,
+      recommendation: actions.length
+        ? `Start with “${actions[0].assignmentTitle}” in ${actions[0].courseName} — it's your single highest-impact move (+${actions[0].gpaGain.toFixed(2)} GPA).`
+        : undefined,
+      actions,
+    }
   }
 
   // 3) Current GPA status.
@@ -220,9 +249,17 @@ export function parseQuestion(question: string, bundles: CourseBundle[]): AskAns
     const active = bundles.filter(b => b.course.isActive)
     const semesterGpa   = computeOverallGpa(active.map(b => computeCoursePercent(b.course, b.assignments, b.groups).percent))
     const cumulativeGpa = computeOverallGpa(bundles.map(b => computeCoursePercent(b.course, b.assignments, b.groups).percent))
+    // Surface the lowest active course as the highest-leverage place to focus.
+    const lowest = active
+      .map(b => ({ name: b.course.name, pct: computeCoursePercent(b.course, b.assignments, b.groups).percent }))
+      .filter((x): x is { name: string; pct: number } => x.pct !== null)
+      .sort((a, b) => a.pct - b.pct)[0]
     return {
       kind: 'current-gpa',
       headline: `Your semester GPA is ${gpa(semesterGpa)} and your cumulative GPA is ${gpa(cumulativeGpa)}.`,
+      recommendation: lowest
+        ? `${lowest.name} is your lowest active course at ${Math.round(lowest.pct)}% — lifting it has the biggest effect on your GPA.`
+        : undefined,
       semesterGpa, cumulativeGpa,
     }
   }

@@ -6,7 +6,7 @@
 
 import { useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Sparkles, CornerDownLeft, TrendingUp, GraduationCap, HelpCircle } from 'lucide-react'
+import { Sparkles, CornerDownLeft, TrendingUp, GraduationCap, HelpCircle, Lightbulb } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import type { CourseBundle } from './simMath'
 import { parseQuestion, type AskAnswer } from './askEngine'
@@ -80,6 +80,14 @@ export default function AskSimulator({ bundles }: { bundles: CourseBundle[] }) {
             </div>
             <p className="text-sm text-zinc-200 leading-relaxed flex-1">{answer.headline}</p>
           </div>
+
+          {/* Concrete next action */}
+          {answer.recommendation && (
+            <div className="flex items-start gap-2 rounded-lg bg-accent-500/10 border border-accent-500/20 px-3 py-2">
+              <Lightbulb size={13} className="text-accent-400 mt-0.5 shrink-0" />
+              <p className="text-xs text-accent-200 leading-relaxed">{answer.recommendation}</p>
+            </div>
+          )}
 
           {/* Visualization by kind */}
           {answer.kind === 'ripple' && answer.ripple && (
