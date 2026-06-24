@@ -157,10 +157,20 @@ export class CanvasAdapter extends IntegrationAdapter {
     // completed (past) enrollments — this deliberately excludes
     // 'invited_or_pending' courses the student hasn't accepted yet, which
     // shouldn't appear anywhere in the app. We include enrollments so we can
-    // see the student's grade data and determine per-course active/past status.
+    // determine per-course active/past status.
+    //
+    // CRITICAL (BUG-009): the enrollment's grade fields
+    // (computed_current_score / computed_current_grade / computed_final_*) are
+    // populated by Canvas ONLY when include[]=total_scores is also requested —
+    // including enrollments by itself is NOT enough (Canvas ignores total_scores
+    // unless enrollments is present, and omits the score fields unless
+    // total_scores is present). Without it, currentScore is null for EVERY
+    // course → no grades appear anywhere, and past courses (which rely solely on
+    // currentScore) show nothing. Some Canvas instances happen to return the
+    // scores anyway, which is why this only failed for some schools.
     const raw = await this.requestPaginated<CanvasCourse>(
       '/api/v1/courses?enrollment_state[]=active&enrollment_state[]=completed' +
-      '&include[]=term&include[]=enrollments&per_page=50'
+      '&include[]=term&include[]=enrollments&include[]=total_scores&per_page=50'
     )
 
     // Keep the raw list and the normalized list index-aligned so the second
