@@ -18,6 +18,7 @@ import type {
 } from '@shared/types/entities'
 import type {
   CanvasCourse,
+  CanvasEnrollment,
   CanvasModule,
   CanvasModuleItem,
   CanvasAssignment,
@@ -28,6 +29,7 @@ import type {
   CanvasQuiz,
   CanvasSubmission,
 } from './canvas.types'
+import { logDebug } from '../../crash-logger'
 
 // Canvas uses per-institution OAuth with developer keys.
 // Each institution runs their own Canvas instance at a unique base URL.
@@ -220,10 +222,54 @@ export class CanvasAdapter extends IntegrationAdapter {
     // enrollment with a 'student' type if none is currently active (this is
     // exactly the case for a past/completed course, where the only student
     // enrollment present will have enrollment_state 'completed').
-    const activeEnrollment = raw.enrollments?.find(
-      e => e.type === 'student' && e.enrollment_state === 'active'
-    )
-    const studentEnrollment = activeEnrollment ?? raw.enrollments?.find(e => e.type === 'student')
+    // Canvas reports the enrollment `type` inconsistently across instances and
+    // endpoints. The embedded-on-course shape (what include[]=enrollments
+    // returns) is usually the lowercase short form "student", but the canonical
+    // Enrollment object — and some Canvas versions/instances even in the
+    // embedded shape — return "StudentEnrollment", and a few use the snake_case
+    // "student_enrollment". The old code matched only the exact lowercase
+    // "student", so on a school whose Canvas returns "StudentEnrollment" we
+    // failed to find the enrollment at all → currentScore/currentGrade became
+    // null for EVERY course → no grades anywhere (BUG-009). Match all spellings
+    // case-insensitively.
+    const enrollments = raw.enrollments ?? []
+    const activeEnrollment =
+      enrollments.find(e => isStudentEnrollment(e) && e.enrollment_state === 'active')
+    let studentEnrollment: CanvasEnrollment | undefined =
+      activeEnrollment ?? enrollments.find(e => isStudentEnrollment(e))
+
+    // Last-resort fallback: if no enrollment matched any known student spelling
+    // but one of them actually carries grade data, use it rather than silently
+    // dropping the student's grade. Reading a grade we maybe shouldn't is
+    // harmless; hiding a real grade is the bug we're fixing.
+    if (!studentEnrollment) {
+      const withGrade = enrollments.find(
+        e => e.computed_current_score != null || e.computed_current_grade != null
+      )
+      if (withGrade) {
+        logDebug(
+          `[CanvasAdapter] course ${raw.id} "${raw.name}": no recognized student ` +
+          `enrollment type (saw: ${enrollments.map(e => e.type).join(', ') || 'none'}); ` +
+          `falling back to an enrollment that carries grade data`
+        )
+        studentEnrollment = withGrade
+      } else if (enrollments.length > 0) {
+        logDebug(
+          `[CanvasAdapter] course ${raw.id} "${raw.name}": no student enrollment and ` +
+          `no enrollment carries grade data (types: ${enrollments.map(e => e.type).join(', ')})`
+        )
+      }
+    }
+
+    // Diagnostic: record the enrollment type we matched and flag a null official
+    // score, so a future "no grades" report can be confirmed from the installed
+    // app's log file without dev tools.
+    if (studentEnrollment && studentEnrollment.computed_current_score == null) {
+      logDebug(
+        `[CanvasAdapter] course ${raw.id} "${raw.name}": matched enrollment ` +
+        `type="${studentEnrollment.type}" but computed_current_score is null`
+      )
+    }
 
     // ── Determine "is this one of my CURRENT classes" ──────────────────────
     // enrollment_state alone is unreliable on school-district Canvas
@@ -664,6 +710,19 @@ export class CanvasAdapter extends IntegrationAdapter {
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
+
+/**
+ * Whether a Canvas enrollment represents the student themselves, tolerant of
+ * every spelling Canvas uses for the enrollment `type` field across instances
+ * and endpoints: "student" (embedded-on-course slim shape), "StudentEnrollment"
+ * (canonical Enrollment object), "student_enrollment" (snake_case on some
+ * instances). Matched case-insensitively. See BUG-009.
+ */
+function isStudentEnrollment(e: CanvasEnrollment): boolean {
+  const t = (e.type ?? '').toLowerCase().replace(/[_\s]/g, '')
+  // "student" and "studentenrollment" both collapse to start with "student"
+  return t === 'student' || t === 'studentenrollment'
+}
 
 /** Very lightweight HTML stripper for producing plain-text assignment descriptions. */
 function stripHtml(html: string): string {

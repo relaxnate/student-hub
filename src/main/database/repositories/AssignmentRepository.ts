@@ -1,5 +1,6 @@
 import { BaseRepository } from './BaseRepository'
 import type { Assignment, Grade, RubricCriterion, SubmissionType } from '@shared/types/entities'
+import { logDebug } from '../../crash-logger'
 
 // ─── Assignment Repository ───────────────────────────────────────────────────
 
@@ -213,5 +214,33 @@ export class GradeRepository extends BaseRepository<Grade, GradeRow> {
   }
 
   save(grade: Grade): void              { this.upsert(grade) }
-  saveMany(grades: Grade[]): void       { this.upsertMany(grades) }
+
+  /**
+   * Resilient bulk upsert. The base `upsertMany` runs every row inside ONE
+   * transaction, so a single bad row rolls back the whole batch. For grades
+   * that's dangerous: `/students/submissions` can return a submission for an
+   * assignment that was never synced (e.g. an unpublished/deleted assignment),
+   * and with `foreign_keys = ON` that row throws a FOREIGN KEY constraint —
+   * which previously discarded EVERY grade for the course and surfaced only as
+   * a partial-sync toast (BUG-009). Here each grade is isolated: an orphan/bad
+   * row is skipped and logged, the rest still persist. Returns counts so the
+   * sync layer can record how many grades stored vs. were skipped per course.
+   */
+  saveMany(grades: Grade[]): { saved: number; skipped: number } {
+    let saved = 0
+    let skipped = 0
+    for (const g of grades) {
+      try {
+        this.upsert(g)
+        saved++
+      } catch (err) {
+        skipped++
+        logDebug(
+          `[GradeRepository] skipped grade ${g.id} (assignment ${g.assignmentId}, ` +
+          `course ${g.courseId}): ${err instanceof Error ? err.message : String(err)}`
+        )
+      }
+    }
+    return { saved, skipped }
+  }
 }

@@ -16,6 +16,7 @@ import { getDb } from '../../database'
 import { IPC } from '@shared/ipc-channels'
 import type { SyncProgress, Integration } from '@shared/types/entities'
 import { TokenExpiredError, RateLimitError, APIError } from '../../integrations/base/errors'
+import { logDebug } from '../../crash-logger'
 import crypto from 'crypto'
 
 const courses           = new CourseRepository()
@@ -103,6 +104,7 @@ export class SyncEngine {
       window.webContents.send(IPC.SYNC.PROGRESS, progress)
 
     let coursesSynced = 0, assignmentsSynced = 0, modulesSynced = 0, filesSynced = 0
+    let gradesSynced = 0, gradesSkipped = 0
 
     // Failures that are specific to one course/phase. We keep syncing
     // everything else and report these at the end instead of aborting.
@@ -260,7 +262,16 @@ export class SyncEngine {
         // Grades
         try {
           const syncedGrades = await adapter.fetchGrades(course.id, extId)
-          grades.saveMany(syncedGrades)
+          const { saved, skipped } = grades.saveMany(syncedGrades)
+          gradesSynced  += saved
+          gradesSkipped += skipped
+          logDebug(
+            `[SyncEngine] ${course.name}: grades fetched=${syncedGrades.length} ` +
+            `stored=${saved} skipped=${skipped}`
+          )
+          if (syncedGrades.length === 0) {
+            logDebug(`[SyncEngine] ${course.name}: Canvas returned zero grade submissions`)
+          }
         } catch (err) {
           if (!isRecoverable(err)) throw err
           if (isExpectedRestriction(err)) {
@@ -349,6 +360,11 @@ export class SyncEngine {
       }
 
       // ── Finalize ─────────────────────────────────────────────────────────
+      logDebug(
+        `[SyncEngine] ${integration.id} done: courses=${coursesSynced} ` +
+        `assignments=${assignmentsSynced} grades=${gradesSynced} (skipped ${gradesSkipped}) ` +
+        `modules=${modulesSynced} files=${filesSynced} issues=${partialErrors.length}`
+      )
       const status = partialErrors.length > 0 ? 'partial' : 'success'
       const combinedErrorMessage = partialErrors.length > 0
         ? `Synced with ${partialErrors.length} issue(s): ${partialErrors.join('; ')}`
