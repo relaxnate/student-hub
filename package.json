@@ -1,6 +1,6 @@
 {
   "name": "student-hub",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Production-grade student productivity desktop application",
   "author": "Student Hub <ghoulredrugs@gmail.com>",
   "main": "out/main/index.js",
