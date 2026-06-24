@@ -1,6 +1,5 @@
-import React, { useEffect, useState, useMemo } from 'react'
-import { motion } from 'framer-motion'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { useEffect, useState, useMemo } from 'react'
+import { ChevronLeft, ChevronRight, X } from 'lucide-react'
 import {
   startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay,
   addMonths, subMonths, startOfWeek, endOfWeek, format, isToday
@@ -8,6 +7,7 @@ import {
 import { api } from '../../lib/ipc'
 import { cn, getDueUrgency } from '../../lib/utils'
 import { Spinner, SectionHeader } from '../../components/ui/Badge'
+import SmartReminders from './SmartReminders'
 import type { Assignment, Course, CalendarEvent } from '@shared/types/entities'
 
 interface DayEvent {
@@ -27,8 +27,8 @@ export default function Calendar() {
       const courseResult = await api.courses.getAll()
       if (!courseResult.ok) { setLoading(false); return }
       setCourses(courseResult.data)
-      const allA = await Promise.all(courseResult.data.map(c => api.assignments.getByCourse(c.id)))
-      setAssignments(allA.flatMap(r => r.ok ? r.data : []))
+      const allA = await Promise.all(courseResult.data.map((c: Course) => api.assignments.getByCourse(c.id)))
+      setAssignments(allA.flatMap((r: { ok: boolean; data: Assignment[] }) => r.ok ? r.data : []))
       const evResult = await api.calendar.getRange({
         startMs: startOfMonth(viewDate).getTime(),
         endMs: endOfMonth(viewDate).getTime(),
@@ -112,10 +112,16 @@ export default function Calendar() {
             })}
           </div>
         </div>
-        {selectedDay && (
-          <motion.div initial={{ width: 0, opacity: 0 }} animate={{ width: 260, opacity: 1 }} className="border-l border-white/5 overflow-hidden shrink-0">
-            <div className="w-[260px] p-4 overflow-y-auto h-full">
-              <p className="text-sm font-semibold text-zinc-200 mb-3">{format(selectedDay, 'EEEE, MMMM d')}</p>
+        {/* Right rail: selected-day detail (when a day is picked) stacked above the
+            always-present Smart Reminders panel. */}
+        <div className="w-[320px] shrink-0 border-l border-white/5 flex flex-col overflow-hidden">
+          {selectedDay && (
+            <div className="p-4 border-b border-white/5 shrink-0 max-h-[45%] overflow-y-auto">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-sm font-semibold text-zinc-200">{format(selectedDay, 'EEEE, MMMM d')}</p>
+                <button onClick={() => setSelectedDay(null)}
+                  className="text-zinc-600 hover:text-zinc-300 transition-colors"><X size={14} /></button>
+              </div>
               {selectedDayEvents.length === 0 ? (
                 <p className="text-xs text-zinc-600">Nothing due or scheduled.</p>
               ) : (
@@ -129,8 +135,11 @@ export default function Calendar() {
                 </div>
               )}
             </div>
-          </motion.div>
-        )}
+          )}
+          <div className="flex-1 overflow-hidden">
+            <SmartReminders />
+          </div>
+        </div>
       </div>
     </div>
   )
