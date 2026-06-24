@@ -70,7 +70,12 @@ export class CanvasAdapter extends IntegrationAdapter {
     return `${this.baseUrl}/login/oauth2/auth?${params.toString()}`
   }
 
-  async exchangeCodeForToken(code: string): Promise<TokenResponse> {
+  async exchangeCodeForToken(
+    code: string,
+    _opts?: { codeVerifier?: string; redirectUri?: string }
+  ): Promise<TokenResponse> {
+    // Canvas developer-key OAuth doesn't use PKCE or a dynamic redirect, so the
+    // opts are intentionally ignored — behavior is unchanged.
     const body = new URLSearchParams({
       grant_type:   'authorization_code',
       client_id:    this.clientId,

@@ -1,6 +1,6 @@
 import { IntegrationAdapter } from '../base/IntegrationAdapter'
 import type { OAuthConfig, TokenResponse } from '../base/IntegrationAdapter'
-import { TokenExpiredError, APIError, NetworkError } from '../base/errors'
+import { TokenExpiredError, RateLimitError, APIError, NetworkError } from '../base/errors'
 import type {
   Course, Module, ModuleItem, Assignment, AssignmentAttachment, AssignmentGroup,
   CourseFile, CoursePage, Quiz, Grade, CalendarEvent,
@@ -46,14 +46,21 @@ export class GoogleClassroomAdapter extends IntegrationAdapter {
     }
   }
 
-  async exchangeCodeForToken(code: string): Promise<TokenResponse> {
+  async exchangeCodeForToken(
+    code: string,
+    opts?: { codeVerifier?: string; redirectUri?: string }
+  ): Promise<TokenResponse> {
+    // redirect_uri MUST match the one used in the auth request. Google desktop
+    // apps use a dynamic 127.0.0.1 loopback redirect (passed via opts), not the
+    // custom scheme (which Google rejects).
     const body = new URLSearchParams({
       grant_type:    'authorization_code',
       code,
       client_id:     this.clientId,
-      client_secret: this.clientSecret,
-      redirect_uri:  REDIRECT_URI,
+      redirect_uri:  opts?.redirectUri ?? REDIRECT_URI,
     })
+    if (this.clientSecret)   body.set('client_secret', this.clientSecret)
+    if (opts?.codeVerifier)  body.set('code_verifier', opts.codeVerifier)
     const res = await fetch(TOKEN_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -355,6 +362,13 @@ export class GoogleClassroomAdapter extends IntegrationAdapter {
       throw new NetworkError(cause)
     }
     if (response.status === 401) throw new TokenExpiredError()
+    if (response.status === 429) {
+      const retryAfter = response.headers.get('Retry-After')
+      throw new RateLimitError(retryAfter ? parseInt(retryAfter) * 1000 : 60_000)
+    }
+    // 403 (course the student can't read via API) and other non-OK statuses
+    // surface as APIError — SyncEngine treats 403 as an expected restriction and
+    // keeps syncing the rest, so one locked course never blocks the others.
     if (!response.ok) throw new APIError(response.status, await response.text().catch(() => ''))
     return response.json() as Promise<T>
   }

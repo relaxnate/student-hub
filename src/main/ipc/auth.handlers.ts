@@ -1,6 +1,7 @@
 import { ipcMain, BrowserWindow } from 'electron'
 import { IPC } from '@shared/ipc-channels'
 import { OAuthManager } from '../services/auth/OAuthManager'
+import { getProviderOAuth, isOAuthConfigured } from '../integrations/oauth-config'
 import type { StartOAuthPayload, ConnectWithTokenPayload } from '@shared/types/ipc'
 
 export function registerAuthHandlers(oauthManager: OAuthManager): void {
@@ -30,9 +31,9 @@ export function registerAuthHandlers(oauthManager: OAuthManager): void {
   ipcMain.handle(IPC.AUTH.START_OAUTH, async (_event, payload: StartOAuthPayload) => {
     try {
       const { provider, baseUrl = '' } = payload
-      const clientId = getClientId(provider)
+      const clientId = getProviderOAuth(provider).clientId
       if (!clientId) {
-        return { ok: false, error: `No client ID configured for ${provider}. Add it to your .env file and restart.` }
+        return { ok: false, error: `${provider} isn't set up yet — Student Hub needs its OAuth client ID configured for this build. (Owner: set it in src/main/integrations/oauth-config.ts or the GOOGLE_CLIENT_ID / MICROSOFT_CLIENT_ID env var.)` }
       }
       const integration = await oauthManager.startOAuth(provider, baseUrl, clientId)
       return { ok: true, data: integration }
@@ -57,14 +58,19 @@ export function registerAuthHandlers(oauthManager: OAuthManager): void {
       return { ok: false, error: String(err) }
     }
   })
-}
 
-function getClientId(provider: string): string | undefined {
-  const map: Record<string, string | undefined> = {
-    'google-classroom': process.env.GOOGLE_CLIENT_ID,
-    'google-calendar':  process.env.GOOGLE_CLIENT_ID,
-    'microsoft-teams':  process.env.MICROSOFT_CLIENT_ID,
-    'outlook-calendar': process.env.MICROSOFT_CLIENT_ID,
-  }
-  return map[provider]
+  // Which OAuth providers are connectable in this build (client ID configured).
+  ipcMain.handle(IPC.AUTH.OAUTH_STATUS, () => {
+    try {
+      return {
+        ok: true,
+        data: {
+          'google-classroom': isOAuthConfigured('google-classroom'),
+          'microsoft-teams':  isOAuthConfigured('microsoft-teams'),
+        } as Record<string, boolean>,
+      }
+    } catch (err) {
+      return { ok: false, error: String(err) }
+    }
+  })
 }

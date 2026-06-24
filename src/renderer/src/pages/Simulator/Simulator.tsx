@@ -1,0 +1,94 @@
+// Academic Outcome Simulator — premium feature (/simulator)
+// Two tabs:
+//   1. Multi-Scenario Simulator  — run up to 4 what-if scenarios side by side
+//   2. Ripple Effect Calculator  — single-assignment impact chain + GPA boosters
+// Shares one load of every course's assignments/grades/groups (CourseBundle[]).
+
+import { useEffect, useState } from 'react'
+import { motion } from 'framer-motion'
+import { FlaskConical, GitBranch, Sparkles, MessageCircleQuestion } from 'lucide-react'
+import { api } from '../../lib/ipc'
+import { cn } from '../../lib/utils'
+import { Spinner, EmptyState, SectionHeader, Badge } from '../../components/ui/Badge'
+import type { Course, Assignment, Grade } from '@shared/types/entities'
+import type { CourseBundle, AssignmentWithGrade } from './simMath'
+import AskSimulator from './AskSimulator'
+import ScenarioSimulator from './ScenarioSimulator'
+import RippleCalculator from './RippleCalculator'
+
+type SimTab = 'ask' | 'scenarios' | 'ripple'
+
+export default function Simulator() {
+  const [bundles, setBundles] = useState<CourseBundle[]>([])
+  const [loading, setLoading] = useState(true)
+  const [tab, setTab]         = useState<SimTab>('ask')
+
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true)
+      const cRes = await api.courses.getAllIncludingInactive()
+      const courses: Course[] = cRes.ok ? cRes.data : []
+
+      const built = await Promise.all(
+        courses.map(async course => {
+          const [aRes, gRes, grpRes] = await Promise.all([
+            api.assignments.getByCourse(course.id),
+            api.grades.getByCourse(course.id),
+            api.assignmentGroups.getByCourse(course.id),
+          ])
+          const gradeMap = new Map((gRes.ok ? gRes.data : []).map((g: Grade) => [g.assignmentId, g]))
+          const assignments: AssignmentWithGrade[] = (aRes.ok ? aRes.data : []).map((a: Assignment) => ({
+            ...a, grade: gradeMap.get(a.id),
+          }))
+          return { course, assignments, groups: grpRes.ok ? grpRes.data : [] } as CourseBundle
+        })
+      )
+      setBundles(built)
+      setLoading(false)
+    }
+    load()
+  }, [])
+
+  if (loading) {
+    return <div className="flex items-center justify-center h-full"><Spinner size={20} /></div>
+  }
+
+  return (
+    <div className="h-full overflow-y-auto">
+      <div className="max-w-5xl mx-auto px-6 py-6 space-y-5">
+        <SectionHeader
+          title="Academic Outcome Simulator"
+          subtitle="Model multiple what-if scenarios and trace how a single grade ripples through your GPA."
+          action={<Badge variant="accent"><Sparkles size={10} className="mr-1" /> Premium</Badge>}
+        />
+
+        {/* Tab switcher */}
+        <div className="flex rounded-lg border border-white/10 overflow-hidden w-fit">
+          {([
+            { id: 'ask',       label: 'Ask',            icon: <MessageCircleQuestion size={14} /> },
+            { id: 'scenarios', label: 'Multi-Scenario', icon: <FlaskConical size={14} /> },
+            { id: 'ripple',    label: 'Ripple Effect',  icon: <GitBranch size={14} /> },
+          ] as { id: SimTab; label: string; icon: React.ReactNode }[]).map(t => (
+            <button key={t.id} onClick={() => setTab(t.id)}
+              className={cn('flex items-center gap-2 px-4 py-2 text-sm transition-colors',
+                tab === t.id ? 'bg-accent-500/20 text-accent-400 font-medium'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5')}>
+              {t.icon}{t.label}
+            </button>
+          ))}
+        </div>
+
+        {bundles.length === 0 ? (
+          <EmptyState icon={<FlaskConical size={20} />} title="No courses synced yet"
+            description="Sync your courses to start simulating academic outcomes." />
+        ) : (
+          <motion.div key={tab} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}>
+            {tab === 'ask'       && <AskSimulator bundles={bundles} />}
+            {tab === 'scenarios' && <ScenarioSimulator bundles={bundles} />}
+            {tab === 'ripple'    && <RippleCalculator bundles={bundles} />}
+          </motion.div>
+        )}
+      </div>
+    </div>
+  )
+}

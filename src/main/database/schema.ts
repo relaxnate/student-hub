@@ -15,7 +15,35 @@
 // they reference is guaranteed to exist by then — regardless of whether the
 // install is brand new or upgrading from an older schema version.
 
-export const CURRENT_SCHEMA_VERSION = 3
+export const CURRENT_SCHEMA_VERSION = 4
+
+// Academic Outcome Simulator tables (schema v4). Defined as a standalone const
+// so the migration in ./index.ts can re-run the exact same DDL on an existing
+// database without duplicating/drifting the table definitions.
+export const SIMULATION_TABLES_SQL = `
+-- ─── Simulation Scenarios ──────────────────────────────────────────────────────
+-- A named "what-if" scenario (e.g. "Best Case") in the Academic Outcome
+-- Simulator. Entirely separate from the single-scenario what_if_scores table so
+-- the Grade & GPA Calculator is never affected.
+CREATE TABLE IF NOT EXISTS simulation_scenarios (
+  id          TEXT PRIMARY KEY,
+  name        TEXT NOT NULL,
+  color       TEXT NOT NULL,
+  created_at  INTEGER NOT NULL
+);
+
+-- ─── Simulation Scores ─────────────────────────────────────────────────────────
+-- One hypothetical score per (scenario, assignment). Cascades on scenario or
+-- assignment deletion.
+CREATE TABLE IF NOT EXISTS simulation_scores (
+  id                 TEXT PRIMARY KEY,
+  scenario_id        TEXT NOT NULL REFERENCES simulation_scenarios(id) ON DELETE CASCADE,
+  assignment_id      TEXT NOT NULL REFERENCES assignments(id) ON DELETE CASCADE,
+  hypothetical_score REAL,
+  created_at         INTEGER NOT NULL,
+  UNIQUE(scenario_id, assignment_id)
+);
+`
 
 export const CREATE_TABLES_SQL = `
 -- ─── Integrations ───────────────────────────────────────────────────────────
@@ -268,6 +296,7 @@ CREATE TABLE IF NOT EXISTS what_if_scores (
   hypothetical_score REAL,
   updated_at         INTEGER NOT NULL
 );
+${SIMULATION_TABLES_SQL}
 `
 
 // All indexes, run AFTER migrations (see ./index.ts initDb) so that every
@@ -302,4 +331,7 @@ CREATE INDEX IF NOT EXISTS idx_grades_course_id     ON grades(course_id);
 CREATE INDEX IF NOT EXISTS idx_grades_assignment_id ON grades(assignment_id);
 
 CREATE INDEX IF NOT EXISTS idx_calendar_start_at ON calendar_events(start_at);
+
+CREATE INDEX IF NOT EXISTS idx_simulation_scores_scenario   ON simulation_scores(scenario_id);
+CREATE INDEX IF NOT EXISTS idx_simulation_scores_assignment ON simulation_scores(assignment_id);
 `

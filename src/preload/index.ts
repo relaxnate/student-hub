@@ -24,6 +24,11 @@ import type {
   SetWhatIfScorePayload,
   GradeRescueReport,
   UpdateState,
+  SimulationScenario,
+  SimulationScore,
+  CreateScenarioPayload,
+  RenameScenarioPayload,
+  SetSimulationScorePayload,
 } from '@shared/types/ipc'
 
 // ─── The API surface exposed to the renderer ──────────────────────────────────
@@ -50,6 +55,10 @@ const api = {
 
     getIntegrations: (): Promise<IPCResult<Integration[]>> =>
       ipcRenderer.invoke(IPC.AUTH.GET_INTEGRATIONS),
+
+    // Map of OAuth provider → whether it's configured (connectable) in this build.
+    getOAuthStatus: (): Promise<IPCResult<Record<string, boolean>>> =>
+      ipcRenderer.invoke(IPC.AUTH.OAUTH_STATUS),
   },
 
   // ─── Sync ───────────────────────────────────────────────────────────────
@@ -169,6 +178,30 @@ const api = {
 
     clearAll: (): Promise<IPCResult<null>> =>
       ipcRenderer.invoke(IPC.WHATIF.CLEAR_ALL),
+  },
+
+  // ─── Academic Outcome Simulator ──────────────────────────────────────────
+  simulation: {
+    getScenarios: (): Promise<IPCResult<SimulationScenario[]>> =>
+      ipcRenderer.invoke(IPC.SIMULATION.GET_SCENARIOS),
+
+    createScenario: (payload: CreateScenarioPayload): Promise<IPCResult<SimulationScenario>> =>
+      ipcRenderer.invoke(IPC.SIMULATION.CREATE_SCENARIO, payload),
+
+    deleteScenario: (id: string): Promise<IPCResult<null>> =>
+      ipcRenderer.invoke(IPC.SIMULATION.DELETE_SCENARIO, id),
+
+    renameScenario: (payload: RenameScenarioPayload): Promise<IPCResult<null>> =>
+      ipcRenderer.invoke(IPC.SIMULATION.RENAME_SCENARIO, payload),
+
+    getScores: (scenarioId: string): Promise<IPCResult<SimulationScore[]>> =>
+      ipcRenderer.invoke(IPC.SIMULATION.GET_SCORES, scenarioId),
+
+    setScore: (payload: SetSimulationScorePayload): Promise<IPCResult<SimulationScore>> =>
+      ipcRenderer.invoke(IPC.SIMULATION.SET_SCORE, payload),
+
+    clearScenario: (scenarioId: string): Promise<IPCResult<null>> =>
+      ipcRenderer.invoke(IPC.SIMULATION.CLEAR_SCENARIO, scenarioId),
   },
 
   // ─── Calendar ───────────────────────────────────────────────────────────

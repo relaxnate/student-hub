@@ -67,8 +67,16 @@ export abstract class IntegrationAdapter {
 
   abstract getOAuthConfig(): OAuthConfig
 
-  /** Exchange an authorization code (from the OAuth callback) for tokens. */
-  abstract exchangeCodeForToken(code: string, codeVerifier?: string): Promise<TokenResponse>
+  /**
+   * Exchange an authorization code (from the OAuth callback) for tokens.
+   * `opts.codeVerifier` carries the PKCE verifier; `opts.redirectUri` overrides
+   * the adapter's default redirect (needed for Google's dynamic 127.0.0.1
+   * loopback port — the token request's redirect_uri must match the auth request).
+   */
+  abstract exchangeCodeForToken(
+    code: string,
+    opts?: { codeVerifier?: string; redirectUri?: string }
+  ): Promise<TokenResponse>
 
   /** Use the refresh token to get a new access token. */
   abstract refreshAccessToken(refreshToken: string): Promise<TokenResponse>

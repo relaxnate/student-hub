@@ -15,6 +15,8 @@ import type {
   SyncProgress,
   SyncLog,
   WhatIfScore,
+  SimulationScenario,
+  SimulationScore,
 } from './entities'
 
 // ─── Auth ───────────────────────────────────────────────────────────────────
@@ -72,6 +74,24 @@ export interface GetPageByUrlPayload {
 // ─── What-If Scores ──────────────────────────────────────────────────────────
 
 export interface SetWhatIfScorePayload {
+  assignmentId: string
+  hypotheticalScore: number | null
+}
+
+// ─── Academic Outcome Simulator ────────────────────────────────────────────────
+
+export interface CreateScenarioPayload {
+  name: string
+  color: string
+}
+
+export interface RenameScenarioPayload {
+  id: string
+  name: string
+}
+
+export interface SetSimulationScorePayload {
+  scenarioId: string
   assignmentId: string
   hypotheticalScore: number | null
 }
@@ -264,6 +284,8 @@ export type {
   SyncProgress,
   SyncLog,
   WhatIfScore,
+  SimulationScenario,
+  SimulationScore,
 }
 
 // Appearance types are exported at their declaration site above.
@@ -286,7 +308,7 @@ export interface WidgetConfig {
 
 export type NavItemId
   = 'dashboard' | 'courses' | 'modules' | 'assignments' | 'grades'
-  | 'grade-calculator' | 'grade-rescue' | 'calendar' | 'files' | 'history'
+  | 'grade-calculator' | 'grade-rescue' | 'simulator' | 'calendar' | 'files' | 'history'
 
 export interface SidebarItemConfig {
   id:        NavItemId

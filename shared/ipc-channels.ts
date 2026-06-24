@@ -10,6 +10,9 @@ export const IPC = {
     OAUTH_CALLBACK:       'auth:oauth-callback',
     LOGOUT:               'auth:logout',
     GET_INTEGRATIONS:     'auth:get-integrations',
+    // Which OAuth providers have a client ID configured in this build
+    // (so the UI shows them as connectable vs "Coming soon").
+    OAUTH_STATUS:         'auth:oauth-status',
   },
 
   // Sync
@@ -76,6 +79,17 @@ export const IPC = {
     SET:                  'whatif:set',
     CLEAR_COURSE:         'whatif:clear-course',
     CLEAR_ALL:            'whatif:clear-all',
+  },
+
+  // Academic Outcome Simulator (multi-scenario)
+  SIMULATION: {
+    GET_SCENARIOS:        'simulation:get-scenarios',
+    CREATE_SCENARIO:      'simulation:create-scenario',
+    DELETE_SCENARIO:      'simulation:delete-scenario',
+    RENAME_SCENARIO:      'simulation:rename-scenario',
+    GET_SCORES:           'simulation:get-scores',
+    SET_SCORE:            'simulation:set-score',
+    CLEAR_SCENARIO:       'simulation:clear-scenario',
   },
 
   // Files

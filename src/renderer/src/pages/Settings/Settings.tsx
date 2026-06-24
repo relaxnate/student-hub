@@ -10,6 +10,7 @@ import {
 } from '../../lib/appearance'
 import { cn } from '../../lib/utils'
 import { Button } from '../../components/ui/Button'
+import { AddPlatform } from '../../components/integrations/AddPlatform'
 import type { Integration, IntegrationProvider } from '@shared/types/entities'
 import type {
   AppPreferences, AppearanceSettings, ThemeMode, CornerStyle, FontFamily,
@@ -151,7 +152,7 @@ function GeneralSection({ prefs, onSave }: { prefs: AppPreferences; onSave: (p: 
 }
 
 // ─── Integrations ─────────────────────────────────────────────────────────────
-function IntegrationsSection({ integrations, onDisconnect }: {
+function IntegrationsSection({ integrations, onDisconnect, onAdd }: {
   integrations: Integration[]; onDisconnect: (id: string) => void; onAdd?: (i: Integration) => void
 }) {
   const [syncing, setSyncing] = useState<string | null>(null)
@@ -176,7 +177,7 @@ function IntegrationsSection({ integrations, onDisconnect }: {
         <div className="rounded-xl bg-surface-800 border border-white/5 p-8 text-center">
           <Link2 size={20} className="text-zinc-600 mx-auto mb-3" />
           <p className="text-sm text-zinc-400 mb-1">No platforms connected</p>
-          <p className="text-xs text-zinc-600">Go to the welcome screen to connect Canvas.</p>
+          <p className="text-xs text-zinc-600">Connect one below to start syncing your courses.</p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -204,6 +205,18 @@ function IntegrationsSection({ integrations, onDisconnect }: {
           })}
         </div>
       )}
+
+      {/* Add a platform */}
+      <div className="pt-3 border-t border-white/5">
+        <h2 className="text-base font-semibold text-zinc-100 mb-1">Add a platform</h2>
+        <p className="text-sm text-zinc-500 mb-4">
+          Connect another learning platform. Canvas &amp; Moodle just need a token and your site URL — no setup or sign-up.
+        </p>
+        <AddPlatform
+          onConnected={i => onAdd?.(i)}
+          connectedProviders={integrations.map(i => i.provider)}
+        />
+      </div>
     </div>
   )
 }

@@ -12,7 +12,7 @@ import {
   LayoutDashboard, BookOpen, Layers, ClipboardList,
   BarChart2, Calendar, FolderOpen, Settings,
   RefreshCw, Loader2, GraduationCap, Plus, Calculator, ShieldAlert,
-  GripVertical, ChevronDown, ChevronRight, Archive,
+  GripVertical, ChevronDown, ChevronRight, Archive, FlaskConical,
 } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import { useAppStore } from '../../store/app.store'
@@ -31,6 +31,7 @@ const NAV_ICONS: Record<NavItemId, React.ReactNode> = {
   'grades':           <BarChart2 size={16} />,
   'grade-calculator': <Calculator size={16} />,
   'grade-rescue':     <ShieldAlert size={16} />,
+  'simulator':        <FlaskConical size={16} />,
   'calendar':         <Calendar size={16} />,
   'files':            <FolderOpen size={16} />,
   'history':          <Archive size={16} />,
@@ -44,6 +45,7 @@ const NAV_ROUTES: Record<NavItemId, string> = {
   'grades':           '/grades',
   'grade-calculator': '/grade-calculator',
   'grade-rescue':     '/grade-rescue',
+  'simulator':        '/simulator',
   'calendar':         '/calendar',
   'files':            '/files',
   'history':          '/history',
@@ -76,6 +78,11 @@ function SortableNavItem({ item, compact }: { item: SidebarItemConfig; compact: 
       >
         <span className="shrink-0">{NAV_ICONS[item.id]}</span>
         {!compact && <span className="flex-1 truncate">{item.label}</span>}
+        {!compact && item.id === 'simulator' && (
+          <span className="shrink-0 px-1 py-px rounded text-[9px] font-bold leading-none tracking-wide bg-accent-500/20 text-accent-400 border border-accent-500/30">
+            PRO
+          </span>
+        )}
       </NavLink>
       {/* Drag handle — only visible on hover in non-compact mode */}
       {!compact && (

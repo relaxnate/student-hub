@@ -2,7 +2,7 @@ import Database from 'better-sqlite3'
 import { app } from 'electron'
 import path from 'path'
 import fs from 'fs'
-import { CREATE_TABLES_SQL, CREATE_INDEXES_SQL, CURRENT_SCHEMA_VERSION } from './schema'
+import { CREATE_TABLES_SQL, CREATE_INDEXES_SQL, CURRENT_SCHEMA_VERSION, SIMULATION_TABLES_SQL } from './schema'
 
 let _db: Database.Database | null = null
 
@@ -100,6 +100,14 @@ const MIGRATIONS: Record<number, MigrationFn> = {
       db.exec(`ALTER TABLE quizzes ADD COLUMN html_url TEXT`)
     }
     // assignment_groups and what_if_scores are new tables — created by CREATE_TABLES_SQL IF NOT EXISTS
+  },
+  // v4: Academic Outcome Simulator. Two new tables (simulation_scenarios,
+  // simulation_scores) — no column changes to existing tables. CREATE_TABLES_SQL
+  // already creates them on fresh installs; we re-run the identical DDL here
+  // (idempotent, IF NOT EXISTS) so an upgrading database also gets them, mirroring
+  // how v3 introduced its new tables. Indexes are added by CREATE_INDEXES_SQL.
+  4: (db) => {
+    db.exec(SIMULATION_TABLES_SQL)
   },
 }
 

@@ -9,6 +9,7 @@ import { registerSyncHandlers } from './sync.handlers'
 import { registerObsidianHandlers, registerDownloadHandlers } from './obsidian.handlers'
 import { registerGradeRescueHandlers } from './gradeRescue.handlers'
 import { registerExportHandlers } from './export.handlers'
+import { registerSimulationHandlers } from './simulation.handlers'
 import { getDb } from '../database'
 import type { AppPreferences } from '@shared/types/ipc'
 
@@ -80,6 +81,7 @@ export function registerAllHandlers(oauthManager: OAuthManager): void {
   registerDownloadHandlers()
   registerGradeRescueHandlers()
   registerExportHandlers()
+  registerSimulationHandlers()
 
   // ─── App / Window ─────────────────────────────────────────────────────
   ipcMain.handle(IPC.APP.GET_VERSION, () => ({ ok: true, data: app.getVersion() }))

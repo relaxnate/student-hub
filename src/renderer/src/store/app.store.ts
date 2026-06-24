@@ -28,6 +28,8 @@ const DEFAULT_PREFS: AppPreferences = {
   backgroundOpacity:        30,
   showHistoryCourses:       false,
   appearance:               DEFAULT_APPEARANCE,
+  workspaceProfiles:        [],
+  workspaceActiveId:        'default',
 }
 
 export const useAppStore = create<AppState>((set, get) => ({

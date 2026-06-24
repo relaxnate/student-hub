@@ -14,6 +14,7 @@ const PageViewer       = lazy(() => import('./pages/Pages/PageViewer'))
 const QuizDetail       = lazy(() => import('./pages/Quizzes/QuizDetail'))
 const CurrentGrades    = lazy(() => import('./pages/Grades/CurrentGrades'))
 const GpaCalculator    = lazy(() => import('./pages/Grades/GpaCalculator'))
+const Simulator        = lazy(() => import('./pages/Simulator/Simulator'))
 const Calendar         = lazy(() => import('./pages/Calendar/Calendar'))
 const Files            = lazy(() => import('./pages/Files/Files'))
 const GradeRescue      = lazy(() => import('./pages/GradeRescue/GradeRescue'))
@@ -47,6 +48,7 @@ export const router = createHashRouter([
       { path: 'calendar',              element: <LazyPage><Calendar /></LazyPage> },
       { path: 'files',                 element: <LazyPage><Files /></LazyPage> },
       { path: 'grade-rescue',          element: <LazyPage><GradeRescue /></LazyPage> },
+      { path: 'simulator',             element: <LazyPage><Simulator /></LazyPage> },
       { path: 'history',               element: <LazyPage><History /></LazyPage> },
       { path: 'settings',              element: <LazyPage><Settings /></LazyPage> },
       { path: 'settings/integrations', element: <LazyPage><Settings /></LazyPage> },

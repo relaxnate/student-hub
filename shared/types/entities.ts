@@ -255,6 +255,26 @@ export interface WhatIfScore {
   updatedAt: number
 }
 
+// ─── Academic Outcome Simulator ───────────────────────────────────────────────
+// A named multi-scenario simulation (e.g. "Best Case") and its per-assignment
+// hypothetical scores. Stored entirely separately from WhatIfScore so the
+// single-scenario Grade & GPA Calculator is never affected.
+
+export interface SimulationScenario {
+  id: string
+  name: string
+  color: string        // hex, for visual distinction between scenarios
+  createdAt: number
+}
+
+export interface SimulationScore {
+  id: string
+  scenarioId: string
+  assignmentId: string
+  hypotheticalScore: number | null
+  createdAt: number
+}
+
 // ─── Grade ──────────────────────────────────────────────────────────────────
 
 export type SubmissionState =

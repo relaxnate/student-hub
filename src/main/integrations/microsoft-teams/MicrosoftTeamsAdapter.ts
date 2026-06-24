@@ -1,6 +1,6 @@
 import { IntegrationAdapter } from '../base/IntegrationAdapter'
 import type { OAuthConfig, TokenResponse } from '../base/IntegrationAdapter'
-import { TokenExpiredError, APIError, NetworkError } from '../base/errors'
+import { TokenExpiredError, RateLimitError, APIError, NetworkError } from '../base/errors'
 import type {
   Course, Module, ModuleItem, Assignment, AssignmentAttachment, AssignmentGroup,
   CourseFile, CoursePage, Quiz, Grade, CalendarEvent, RubricCriterion,
@@ -47,14 +47,20 @@ export class MicrosoftTeamsAdapter extends IntegrationAdapter {
     }
   }
 
-  async exchangeCodeForToken(code: string): Promise<TokenResponse> {
+  async exchangeCodeForToken(
+    code: string,
+    opts?: { codeVerifier?: string; redirectUri?: string }
+  ): Promise<TokenResponse> {
+    // MS public clients require the PKCE code_verifier at the token step. The
+    // custom-scheme redirect is valid for Azure "Mobile & desktop" apps.
     const body = new URLSearchParams({
       grant_type:   'authorization_code',
       client_id:    this.clientId,
-      redirect_uri: REDIRECT_URI,
+      redirect_uri: opts?.redirectUri ?? REDIRECT_URI,
       scope:        SCOPES,
       code,
     })
+    if (opts?.codeVerifier) body.set('code_verifier', opts.codeVerifier)
     const res = await fetch(`${this.authBase}/token`, {
       method:  'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -360,6 +366,12 @@ export class MicrosoftTeamsAdapter extends IntegrationAdapter {
       throw new NetworkError(cause)
     }
     if (response.status === 401) throw new TokenExpiredError()
+    if (response.status === 429) {
+      const retryAfter = response.headers.get('Retry-After')
+      throw new RateLimitError(retryAfter ? parseInt(retryAfter) * 1000 : 60_000)
+    }
+    // 403 on /education/* (non-EDU tenant or admin consent not granted) and other
+    // non-OK statuses surface as APIError; SyncEngine isolates these per phase.
     if (!response.ok) throw new APIError(response.status, await response.text().catch(() => ''))
     return response.json() as Promise<T>
   }
