@@ -79,7 +79,7 @@ function SortableNavItem({ item, compact }: { item: SidebarItemConfig; compact: 
         <span className="shrink-0">{NAV_ICONS[item.id]}</span>
         {!compact && <span className="flex-1 truncate">{item.label}</span>}
         {!compact && item.id === 'simulator' && (
-          <span className="shrink-0 px-1 py-px rounded text-[9px] font-bold leading-none tracking-wide bg-accent-500/20 text-accent-400 border border-accent-500/30">
+          <span className="shrink-0 px-1 py-px rounded text-[11px] font-bold leading-none tracking-wide bg-accent-500/20 text-accent-400 border border-accent-500/30">
             PRO
           </span>
         )}

@@ -9,8 +9,7 @@ import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { FlaskConical, GitBranch, Sparkles, MessageCircleQuestion } from 'lucide-react'
 import { api } from '../../lib/ipc'
-import { cn } from '../../lib/utils'
-import { Spinner, EmptyState, SectionHeader, Badge } from '../../components/ui/Badge'
+import { Spinner, EmptyState, SectionHeader, Badge, Segmented } from '../../components/ui/Badge'
 import type { Course, Assignment, Grade } from '@shared/types/entities'
 import type { CourseBundle, AssignmentWithGrade } from './simMath'
 import AskSimulator from './AskSimulator'
@@ -71,16 +70,11 @@ export default function Simulator() {
 
         {/* Tab switcher + active-tab description */}
         <div className="space-y-2">
-          <div className="flex rounded-lg border border-white/10 overflow-hidden w-fit">
-            {TABS.map(t => (
-              <button key={t.id} onClick={() => setTab(t.id)}
-                className={cn('flex items-center gap-2 px-4 py-2 text-sm transition-colors',
-                  tab === t.id ? 'bg-accent-500/20 text-accent-400 font-medium'
-                    : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5')}>
-                {t.icon}{t.label}
-              </button>
-            ))}
-          </div>
+          <Segmented
+            options={TABS.map(t => ({ id: t.id, label: t.label, icon: t.icon }))}
+            value={tab}
+            onChange={v => setTab(v as SimTab)}
+          />
           <p className="text-xs text-zinc-500">{TABS.find(t => t.id === tab)!.desc}</p>
         </div>
 

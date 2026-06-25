@@ -90,7 +90,7 @@ module.exports = {
         mono:  ['JetBrains Mono', 'Fira Code', 'ui-monospace', 'monospace'],
       },
       fontSize: {
-        '2xs': ['0.65rem', { lineHeight: '1rem' }],
+        '2xs': ['0.6875rem', { lineHeight: '1rem' }],
       },
       // Density-scaled spacing (padding / gap / space-between only)
       padding: densitySpacing(),

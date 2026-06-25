@@ -2,6 +2,121 @@ import React from 'react'
 import { cn } from '../../lib/utils'
 import { Loader2 } from 'lucide-react'
 
+// ─── Skeleton ─────────────────────────────────────────────────────────────────
+
+interface SkeletonProps {
+  className?: string
+  lines?: number
+}
+
+export function Skeleton({ className, lines = 1 }: SkeletonProps) {
+  if (lines > 1) {
+    return (
+      <div className="space-y-2">
+        {Array.from({ length: lines }).map((_, i) => (
+          <div
+            key={i}
+            className={cn(
+              'h-3 rounded bg-surface-700 animate-pulse-soft',
+              i === lines - 1 ? 'w-2/3' : 'w-full',
+              className
+            )}
+          />
+        ))}
+      </div>
+    )
+  }
+  return <div className={cn('h-3 rounded bg-surface-700 animate-pulse-soft', className)} />
+}
+
+// ─── Card ─────────────────────────────────────────────────────────────────────
+
+type CardVariant = 'default' | 'flat' | 'bordered'
+
+interface CardProps {
+  children: React.ReactNode
+  className?: string
+  variant?: CardVariant
+  padding?: boolean
+}
+
+export function Card({ children, className, variant = 'default', padding = true }: CardProps) {
+  return (
+    <div
+      className={cn(
+        'rounded-xl',
+        variant === 'default'  && 'bg-surface-800 border border-white/5 shadow-sm',
+        variant === 'flat'     && 'bg-surface-900/50 border border-white/5',
+        variant === 'bordered' && 'bg-transparent border border-white/10',
+        padding && 'p-4',
+        className
+      )}
+    >
+      {children}
+    </div>
+  )
+}
+
+// ─── PageHeader ───────────────────────────────────────────────────────────────
+
+interface PageHeaderProps {
+  title:     string
+  subtitle?: string
+  action?:   React.ReactNode
+  back?:     React.ReactNode
+  className?: string
+}
+
+export function PageHeader({ title, subtitle, action, back, className }: PageHeaderProps) {
+  return (
+    <div className={cn('flex items-start justify-between gap-4', className)}>
+      <div className="min-w-0">
+        {back && <div className="mb-1">{back}</div>}
+        <h1 className="text-xl font-semibold text-zinc-100 truncate">{title}</h1>
+        {subtitle && <p className="text-sm text-zinc-500 mt-0.5 leading-relaxed">{subtitle}</p>}
+      </div>
+      {action && <div className="shrink-0 flex items-center gap-2">{action}</div>}
+    </div>
+  )
+}
+
+// ─── Segmented ────────────────────────────────────────────────────────────────
+
+interface SegmentedOption {
+  id:     string
+  label:  string
+  icon?:  React.ReactNode
+}
+
+interface SegmentedProps {
+  options:   SegmentedOption[]
+  value:     string
+  onChange:  (value: string) => void
+  className?: string
+}
+
+export function Segmented({ options, value, onChange, className }: SegmentedProps) {
+  return (
+    <div className={cn('flex rounded-lg border border-white/10 overflow-hidden w-fit', className)}>
+      {options.map(opt => (
+        <button
+          key={opt.id}
+          onClick={() => onChange(opt.id)}
+          className={cn(
+            'flex items-center gap-2 px-4 py-2 text-sm transition-colors',
+            value === opt.id
+              ? 'bg-accent-500/20 text-accent-400 font-medium'
+              : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5'
+          )}
+        >
+          {opt.icon}
+          {opt.label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
 // ─── Badge ────────────────────────────────────────────────────────────────────
 
 type BadgeVariant = 'default' | 'success' | 'warning' | 'danger' | 'info' | 'accent'
