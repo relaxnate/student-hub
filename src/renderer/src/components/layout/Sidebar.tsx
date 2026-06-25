@@ -68,20 +68,27 @@ function SortableNavItem({ item, compact }: { item: SidebarItemConfig; compact: 
       <NavLink
         to={NAV_ROUTES[item.id]}
         className={({ isActive }) => cn(
-          'flex items-center rounded-md text-sm transition-colors duration-100',
+          'relative flex items-center rounded-md text-sm transition-colors duration-100',
           compact ? 'justify-center px-0 py-2' : 'gap-2.5 px-2.5 py-1.5',
           isActive
-            ? 'bg-accent-500/15 text-accent-400 font-medium'
+            ? 'text-accent-400 font-medium'
             : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5'
         )}
         title={compact ? item.label : undefined}
       >
-        <span className="shrink-0">{NAV_ICONS[item.id]}</span>
-        {!compact && <span className="flex-1 truncate">{item.label}</span>}
-        {!compact && item.id === 'simulator' && (
-          <span className="shrink-0 px-1 py-px rounded text-[11px] font-bold leading-none tracking-wide bg-accent-500/20 text-accent-400 border border-accent-500/30">
-            PRO
-          </span>
+        {({ isActive }) => (
+          <>
+            {isActive && !compact && (
+              <span className="absolute left-0 top-1 bottom-1 w-0.5 rounded-r-sm bg-accent-400" />
+            )}
+            <span className="shrink-0">{NAV_ICONS[item.id]}</span>
+            {!compact && <span className="flex-1 truncate">{item.label}</span>}
+            {!compact && item.id === 'simulator' && (
+              <span className="shrink-0 px-1 py-px rounded text-[11px] font-bold leading-none tracking-wide bg-accent-500/20 text-accent-400 border border-accent-500/30">
+                PRO
+              </span>
+            )}
+          </>
         )}
       </NavLink>
       {/* Drag handle — only visible on hover in non-compact mode */}
@@ -175,7 +182,7 @@ export function Sidebar() {
     'flex items-center rounded-md text-sm transition-colors duration-100',
     compact ? 'justify-center px-0 py-2' : 'gap-2.5 px-2.5 py-1.5',
     isActive
-      ? 'bg-accent-500/15 text-accent-400 font-medium'
+      ? 'text-accent-400 font-medium'
       : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5'
   )
 

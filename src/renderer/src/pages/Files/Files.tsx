@@ -2,7 +2,8 @@ import { useEffect, useState, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import {
   FolderOpen, Search, Download, ExternalLink,
-  FolderIcon, Eye, Loader2
+  FolderIcon, Eye, Loader2,
+  FileText, Table2, ImageIcon, Video, Music, Archive, Globe, Braces, File,
 } from 'lucide-react'
 import { api } from '../../lib/ipc'
 import { cn, formatFileSize } from '../../lib/utils'
@@ -10,24 +11,34 @@ import { Spinner, EmptyState, SectionHeader, Badge } from '../../components/ui/B
 import { useAppStore } from '../../store/app.store'
 import type { CourseFile, Course } from '@shared/types/entities'
 
-const MIME_EMOJI: Record<string, string> = {
-  'application/pdf': '📄',
-  'application/msword': '📝',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '📝',
-  'application/vnd.ms-powerpoint': '📊',
-  'application/vnd.openxmlformats-officedocument.presentationml.presentation': '📊',
-  'application/vnd.ms-excel': '📋',
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': '📋',
-  'image/jpeg': '🖼️', 'image/png': '🖼️', 'image/webp': '🖼️', 'image/gif': '🖼️',
-  'video/mp4': '🎬', 'video/quicktime': '🎬', 'video/webm': '🎬',
-  'audio/mpeg': '🎵', 'audio/wav': '🎵', 'audio/ogg': '🎵',
-  'text/plain': '📃', 'text/html': '🌐', 'text/css': '🎨',
-  'application/zip': '🗜️', 'application/x-zip-compressed': '🗜️',
-  'application/json': '{ }',
+const MIME_ICON: Record<string, React.ReactNode> = {
+  'application/pdf':   <FileText size={16} className="text-red-400" />,
+  'application/msword': <FileText size={16} className="text-blue-400" />,
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': <FileText size={16} className="text-blue-400" />,
+  'application/vnd.ms-powerpoint': <FileText size={16} className="text-orange-400" />,
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation': <FileText size={16} className="text-orange-400" />,
+  'application/vnd.ms-excel': <Table2 size={16} className="text-green-400" />,
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': <Table2 size={16} className="text-green-400" />,
+  'image/jpeg': <ImageIcon size={16} className="text-purple-400" />,
+  'image/png':  <ImageIcon size={16} className="text-purple-400" />,
+  'image/webp': <ImageIcon size={16} className="text-purple-400" />,
+  'image/gif':  <ImageIcon size={16} className="text-purple-400" />,
+  'video/mp4':       <Video size={16} className="text-pink-400" />,
+  'video/quicktime': <Video size={16} className="text-pink-400" />,
+  'video/webm':      <Video size={16} className="text-pink-400" />,
+  'audio/mpeg': <Music size={16} className="text-amber-400" />,
+  'audio/wav':  <Music size={16} className="text-amber-400" />,
+  'audio/ogg':  <Music size={16} className="text-amber-400" />,
+  'text/plain': <FileText size={16} className="text-zinc-400" />,
+  'text/html':  <Globe size={16} className="text-cyan-400" />,
+  'text/css':   <Braces size={16} className="text-violet-400" />,
+  'application/zip':            <Archive size={16} className="text-zinc-400" />,
+  'application/x-zip-compressed': <Archive size={16} className="text-zinc-400" />,
+  'application/json': <Braces size={16} className="text-yellow-400" />,
 }
 
-function fileEmoji(contentType: string): string {
-  return MIME_EMOJI[contentType] ?? '📄'
+function fileIcon(contentType: string): React.ReactNode {
+  return MIME_ICON[contentType] ?? <File size={16} className="text-zinc-500" />
 }
 
 interface FileWithCourse extends CourseFile {
@@ -257,8 +268,8 @@ function FileRow({ file, isLast }: { file: FileWithCourse; isLast: boolean }) {
       'flex items-center gap-3 px-4 py-2.5 hover:bg-white/3 transition-colors',
       !isLast && 'border-b border-white/3'
     )}>
-      <span className="text-base shrink-0 select-none" aria-hidden>
-        {fileEmoji(file.contentType)}
+      <span className="shrink-0 select-none" aria-hidden>
+        {fileIcon(file.contentType)}
       </span>
 
       <div className="flex-1 min-w-0">

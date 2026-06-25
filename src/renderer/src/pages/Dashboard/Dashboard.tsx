@@ -17,7 +17,7 @@ import {
 } from 'lucide-react'
 import { api } from '../../lib/ipc'
 import { cn, formatDueDate, getDueUrgency } from '../../lib/utils'
-import { Spinner, Badge } from '../../components/ui/Badge'
+import { Skeleton, Badge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import { useAppStore } from '../../store/app.store'
 import { useWorkspaceStore } from '../../store/workspace.store'
@@ -385,30 +385,34 @@ function WidgetContent({ widget, data }: { widget: WidgetConfig; data: Dashboard
 
 // ─── Sortable widget wrapper ──────────────────────────────────────────────────
 
-function SortableWidget({ widget, data, isEditing, onUpdate, onHide }: {
+function SortableWidget({ widget, data, isEditing, onUpdate, onHide, index }: {
   widget:    WidgetConfig
   data:      DashboardData
   isEditing: boolean
   onUpdate:  (id: string, patch: Partial<WidgetConfig>) => void
   onHide:    (id: string) => void
+  index:     number
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: widget.id, disabled: widget.pinned || !isEditing })
 
   const style: React.CSSProperties = {
-    transform:  CSS.Transform.toString(transform),
+    transform:       CSS.Transform.toString(transform),
     transition,
-    opacity:    isDragging ? 0.5 : 1,
-    zIndex:     isDragging ? 50 : undefined,
-    gridColumn: widget.size === 'small' ? 'span 1' : widget.size === 'medium' ? 'span 1' : 'span 2',
+    opacity:         isDragging ? 0.5 : 1,
+    zIndex:          isDragging ? 50 : undefined,
+    gridColumn:      widget.size === 'small' ? 'span 1' : widget.size === 'medium' ? 'span 1' : 'span 2',
+    animationDelay:  `${index * 0.04}s`,
   }
 
   return (
     <div ref={setNodeRef} style={style}
-      className={cn('bg-surface-800 border border-white/5 rounded-xl overflow-hidden flex flex-col',
+      className={cn(
+        'bg-surface-800 border border-white/5 rounded-xl overflow-hidden flex flex-col animate-fade-in',
         isEditing && 'ring-1 ring-accent-500/20',
         widget.pinned && isEditing && 'ring-accent-500/40',
-        isDragging && 'shadow-lg shadow-black/40')}>
+        isDragging && 'shadow-lg shadow-black/40'
+      )}>
       {isEditing && (
         <WidgetToolbar
           widget={widget}
@@ -537,13 +541,21 @@ export default function Dashboard() {
         </div>
 
         {data.loading ? (
-          <div className="flex items-center justify-center h-40"><Spinner size={20} /></div>
+          <div className="grid grid-cols-2 gap-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="rounded-xl bg-surface-800 border border-white/5 p-4 space-y-3">
+                <Skeleton className="w-24 h-3" />
+                <Skeleton className="w-full h-14" />
+                <Skeleton className="w-3/4 h-3" />
+              </div>
+            ))}
+          </div>
         ) : (
           <>
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
               <SortableContext items={visible.map(w => w.id)} strategy={rectSortingStrategy}>
                 <div className="grid grid-cols-2 gap-4">
-                  {visible.map(widget => (
+                  {visible.map((widget, index) => (
                     <SortableWidget
                       key={widget.id}
                       widget={widget}
@@ -551,6 +563,7 @@ export default function Dashboard() {
                       isEditing={isEditing}
                       onUpdate={handleUpdate}
                       onHide={handleHide}
+                      index={index}
                     />
                   ))}
                 </div>
