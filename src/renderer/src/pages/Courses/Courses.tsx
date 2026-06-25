@@ -7,7 +7,7 @@ import {
 } from 'lucide-react'
 import { api } from '../../lib/ipc'
 import { cn } from '../../lib/utils'
-import { Spinner, EmptyState } from '../../components/ui/Badge'
+import { Skeleton, EmptyState } from '../../components/ui/Badge'
 import { useWorkspaceStore } from '../../store/workspace.store'
 import { useAppStore } from '../../store/app.store'
 import type { Course } from '@shared/types/entities'
@@ -48,47 +48,52 @@ function CardsView({ courses }: { courses: Course[] }) {
       {courses.map(course => (
         <div key={course.id}
           onClick={() => navigate(`/courses/${course.id}`)}
-          className="rounded-xl bg-surface-800 border border-white/5 overflow-hidden hover:border-white/15 transition-colors group cursor-pointer">
-          <div className="flex items-center gap-4 p-5">
-            <div className="w-12 h-12 rounded-xl shrink-0 flex items-center justify-center text-white text-xl font-bold"
-              style={{ background: course.color ?? '#6366f1' }}>
-              {course.name[0]}
-            </div>
-            <div className="flex-1 min-w-0">
-              <h3 className="text-base font-semibold text-zinc-100 truncate group-hover:text-white transition-colors">
-                {course.name}
-              </h3>
-              <div className="flex items-center gap-2 text-xs text-zinc-500 mt-0.5">
-                {course.courseCode && <span>{course.courseCode}</span>}
-                {course.term && <span>{course.term}</span>}
+          className="rounded-xl bg-surface-800 border border-white/5 overflow-hidden hover:border-white/15 transition-colors group cursor-pointer flex">
+          {/* Left color bar */}
+          <div className="w-1 shrink-0" style={{ background: course.color ?? '#6366f1' }} />
+          {/* Right: header + footer stacked vertically */}
+          <div className="flex-1 flex flex-col min-w-0">
+            <div className="flex items-center gap-4 p-5">
+              <div className="w-12 h-12 rounded-xl shrink-0 flex items-center justify-center text-white text-xl font-bold"
+                style={{ background: course.color ?? '#6366f1' }}>
+                {course.name[0]}
               </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-base font-semibold text-zinc-100 truncate group-hover:text-white transition-colors">
+                  {course.name}
+                </h3>
+                <div className="flex items-center gap-2 text-xs text-zinc-500 mt-0.5">
+                  {course.courseCode && <span>{course.courseCode}</span>}
+                  {course.term && <span>{course.term}</span>}
+                </div>
+              </div>
+              <div className="text-right shrink-0">
+                {course.currentScore != null && (
+                  <p className={cn('text-lg font-bold', gradeColor(course.currentScore))}>
+                    {course.currentScore.toFixed(1)}%
+                  </p>
+                )}
+                {course.currentGrade && (
+                  <p className="text-xs text-zinc-500">{course.currentGrade}</p>
+                )}
+              </div>
+              <ArrowRight size={16} className="text-zinc-600 group-hover:text-zinc-400 transition-colors shrink-0" />
             </div>
-            <div className="text-right shrink-0">
-              {course.currentScore != null && (
-                <p className={cn('text-lg font-bold', gradeColor(course.currentScore))}>
-                  {course.currentScore.toFixed(1)}%
-                </p>
-              )}
-              {course.currentGrade && (
-                <p className="text-xs text-zinc-500">{course.currentGrade}</p>
-              )}
+            {/* Footer links stop propagation so clicking them navigates to the
+                sub-page rather than the course detail */}
+            <div className="border-t border-white/5 px-5 py-2.5 flex gap-5"
+              onClick={e => e.stopPropagation()}>
+              {[
+                { to: `/modules?course=${course.id}`,     icon: <Layers size={13} />,       label: 'Modules' },
+                { to: `/assignments?course=${course.id}`, icon: <ClipboardList size={13} />, label: 'Assignments' },
+                { to: `/grades?course=${course.id}`,      icon: <BarChart2 size={13} />,     label: 'Grades' },
+              ].map(link => (
+                <Link key={link.to} to={link.to}
+                  className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-accent-400 transition-colors">
+                  {link.icon}<span>{link.label}</span>
+                </Link>
+              ))}
             </div>
-            <ArrowRight size={16} className="text-zinc-600 group-hover:text-zinc-400 transition-colors shrink-0" />
-          </div>
-          {/* Footer links stop propagation so clicking them navigates to the
-              sub-page rather than the course detail */}
-          <div className="border-t border-white/5 px-5 py-2.5 flex gap-5"
-            onClick={e => e.stopPropagation()}>
-            {[
-              { to: `/modules?course=${course.id}`,     icon: <Layers size={13} />,       label: 'Modules' },
-              { to: `/assignments?course=${course.id}`, icon: <ClipboardList size={13} />, label: 'Assignments' },
-              { to: `/grades?course=${course.id}`,      icon: <BarChart2 size={13} />,     label: 'Grades' },
-            ].map(link => (
-              <Link key={link.to} to={link.to}
-                className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-accent-400 transition-colors">
-                {link.icon}<span>{link.label}</span>
-              </Link>
-            ))}
           </div>
         </div>
       ))}
@@ -199,7 +204,20 @@ export default function Courses() {
     }
   }, [courses, sortBy])
 
-  if (loading) return <div className="flex items-center justify-center h-full"><Spinner size={20} /></div>
+  if (loading) return (
+    <div className="p-6 max-w-4xl mx-auto space-y-3">
+      {Array.from({ length: 4 }).map((_, i) => (
+        <div key={i} className="rounded-xl bg-surface-800 border border-white/5 p-5 flex items-center gap-4">
+          <Skeleton className="w-12 h-12 rounded-xl" />
+          <div className="flex-1 space-y-2">
+            <Skeleton className="w-48 h-4" />
+            <Skeleton className="w-32 h-3" />
+          </div>
+          <Skeleton className="w-14 h-5" />
+        </div>
+      ))}
+    </div>
+  )
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="h-full overflow-y-auto">

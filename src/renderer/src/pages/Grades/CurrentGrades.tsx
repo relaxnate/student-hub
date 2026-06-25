@@ -7,7 +7,7 @@ import {
 } from 'lucide-react'
 import { api } from '../../lib/ipc'
 import { cn, percentToLetter } from '../../lib/utils'
-import { Badge, Spinner, EmptyState, SectionHeader } from '../../components/ui/Badge'
+import { Badge, Skeleton, EmptyState, SectionHeader } from '../../components/ui/Badge'
 import { useWorkspaceStore } from '../../store/workspace.store'
 import { useAppStore } from '../../store/app.store'
 import type { Course, Assignment, Grade } from '@shared/types/entities'
@@ -457,7 +457,21 @@ export default function CurrentGrades() {
     }
   }, [summaries, filterCourseId, sortBy])
 
-  if (loading) return <div className="flex items-center justify-center h-full"><Spinner size={20} /></div>
+  if (loading) return (
+    <div className="p-6 max-w-4xl mx-auto space-y-4">
+      {Array.from({ length: 3 }).map((_, i) => (
+        <div key={i} className="rounded-xl bg-surface-800 border border-white/5 p-4 space-y-3">
+          <div className="flex items-center gap-3">
+            <Skeleton className="w-5 h-5 rounded-md" />
+            <Skeleton className="w-40 h-4" />
+            <div className="ml-auto"><Skeleton className="w-16 h-4" /></div>
+          </div>
+          <Skeleton className="w-full h-1.5 rounded-full" />
+          <Skeleton lines={3} />
+        </div>
+      ))}
+    </div>
+  )
 
   if (displayed.length === 0) {
     return (

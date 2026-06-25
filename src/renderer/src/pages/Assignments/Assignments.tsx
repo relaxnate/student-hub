@@ -7,7 +7,7 @@ import {
 } from 'lucide-react'
 import { api } from '../../lib/ipc'
 import { cn, formatDueDate, getDueUrgency } from '../../lib/utils'
-import { Badge, Spinner, EmptyState } from '../../components/ui/Badge'
+import { Badge, Skeleton, EmptyState } from '../../components/ui/Badge'
 import { useWorkspaceStore } from '../../store/workspace.store'
 import { useAppStore } from '../../store/app.store'
 import type { Assignment, Course, Grade } from '@shared/types/entities'
@@ -315,7 +315,22 @@ export default function Assignments() {
     return result
   }, [assignments, search, sortBy])
 
-  if (loading) return <div className="flex items-center justify-center h-full"><Spinner size={20} /></div>
+  if (loading) return (
+    <div className="p-6 max-w-4xl mx-auto">
+      <div className="rounded-xl bg-surface-800 border border-white/5 divide-y divide-white/5 overflow-hidden">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="flex items-center gap-3 px-4 py-3">
+            <div className="w-1.5 h-6 rounded-full bg-surface-700 animate-pulse-soft shrink-0" />
+            <div className="flex-1 space-y-2">
+              <Skeleton className="w-56 h-3" />
+              <Skeleton className="w-32 h-2.5" />
+            </div>
+            <Skeleton className="w-16 h-3" />
+          </div>
+        ))}
+      </div>
+    </div>
+  )
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="h-full overflow-y-auto">

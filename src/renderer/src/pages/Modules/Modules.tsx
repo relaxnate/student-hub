@@ -8,7 +8,7 @@ import {
 } from 'lucide-react'
 import { api } from '../../lib/ipc'
 import { cn } from '../../lib/utils'
-import { Spinner, EmptyState, SectionHeader, Badge } from '../../components/ui/Badge'
+import { Skeleton, EmptyState, SectionHeader, Badge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import { LinkOpener, useLinkOpener } from '../../components/ui/LinkOpener'
 import { useWorkspaceStore } from '../../store/workspace.store'
@@ -368,7 +368,15 @@ export default function Modules() {
           </div>
 
           {loading ? (
-            <div className="flex items-center justify-center py-16"><Spinner size={20} /></div>
+            <div className="space-y-2 py-2">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="rounded-lg bg-surface-800 border border-white/5 p-3 flex items-center gap-3">
+                  <Skeleton className="w-4 h-4 rounded" />
+                  <Skeleton className="flex-1 h-3" />
+                  <Skeleton className="w-12 h-3" />
+                </div>
+              ))}
+            </div>
           ) : modules.length === 0 ? (
             <EmptyState icon={<Layers size={20} />} title="No modules yet"
               description="Modules will appear after syncing."
