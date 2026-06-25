@@ -7,7 +7,7 @@ import {
 } from 'lucide-react'
 import { api } from '../../lib/ipc'
 import { cn } from '../../lib/utils'
-import { Spinner } from '../../components/ui/Badge'
+import { Skeleton } from '../../components/ui/Badge'
 import type { GradeRescueReport, RescueAction, RescueRiskLevel } from '@shared/types/ipc'
 
 // ─── Risk level meta ─────────────────────────────────────────────────────────
@@ -86,8 +86,14 @@ export default function GradeRescue() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <Spinner size={20} />
+      <div className="p-6 max-w-4xl mx-auto grid grid-cols-3 gap-4">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={i} className="rounded-xl bg-surface-800 border border-white/5 p-4 space-y-3">
+            <Skeleton className="w-full h-4 rounded-lg" />
+            <Skeleton className="w-3/4 h-3" />
+            <Skeleton className="w-full h-8 rounded-lg" />
+          </div>
+        ))}
       </div>
     )
   }

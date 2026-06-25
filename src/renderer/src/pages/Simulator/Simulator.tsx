@@ -9,7 +9,7 @@ import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { FlaskConical, GitBranch, Sparkles, MessageCircleQuestion } from 'lucide-react'
 import { api } from '../../lib/ipc'
-import { Spinner, EmptyState, SectionHeader, Badge, Segmented } from '../../components/ui/Badge'
+import { Skeleton, EmptyState, SectionHeader, Badge, Segmented } from '../../components/ui/Badge'
 import type { Course, Assignment, Grade } from '@shared/types/entities'
 import type { CourseBundle, AssignmentWithGrade } from './simMath'
 import AskSimulator from './AskSimulator'
@@ -56,7 +56,17 @@ export default function Simulator() {
   }, [])
 
   if (loading) {
-    return <div className="flex items-center justify-center h-full"><Spinner size={20} /></div>
+    return (
+      <div className="p-6 max-w-5xl mx-auto space-y-5">
+        <Skeleton className="w-64 h-5" />
+        <div className="flex gap-2">
+          {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="w-28 h-9 rounded-lg" />)}
+        </div>
+        <div className="space-y-3">
+          {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="w-full h-4" />)}
+        </div>
+      </div>
+    )
   }
 
   return (

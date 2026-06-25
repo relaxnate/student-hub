@@ -7,7 +7,7 @@ import {
 } from 'lucide-react'
 import { api } from '../../lib/ipc'
 import { cn, percentToLetter } from '../../lib/utils'
-import { Spinner } from '../../components/ui/Badge'
+import { Skeleton } from '../../components/ui/Badge'
 import type { Course, Assignment, Grade } from '@shared/types/entities'
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
@@ -539,7 +539,17 @@ export default function History() {
   }
 
   if (loading) {
-    return <div className="flex items-center justify-center h-full"><Spinner size={20} /></div>
+    return (
+      <div className="p-6 max-w-4xl mx-auto space-y-4">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={i} className="rounded-xl bg-surface-800 border border-white/5 p-4 space-y-3">
+            <Skeleton className="w-36 h-4" />
+            <Skeleton className="w-full h-2 rounded-full" />
+            <Skeleton lines={3} />
+          </div>
+        ))}
+      </div>
+    )
   }
 
   if (!semesters.length) {

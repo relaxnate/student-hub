@@ -7,7 +7,7 @@ import {
 } from 'lucide-react'
 import { api } from '../../lib/ipc'
 import { cn, formatFileSize } from '../../lib/utils'
-import { Spinner, EmptyState, SectionHeader, Badge } from '../../components/ui/Badge'
+import { Skeleton, EmptyState, SectionHeader, Badge } from '../../components/ui/Badge'
 import { useAppStore } from '../../store/app.store'
 import type { CourseFile, Course } from '@shared/types/entities'
 
@@ -110,7 +110,20 @@ export default function Files() {
   )
 
   if (loading) {
-    return <div className="flex items-center justify-center h-full"><Spinner size={20} /></div>
+    return (
+      <div className="p-6 space-y-2">
+        {Array.from({ length: 8 }).map((_, i) => (
+          <div key={i} className="flex items-center gap-3 px-4 py-2.5">
+            <Skeleton className="w-4 h-4 rounded" />
+            <div className="flex-1 space-y-1.5">
+              <Skeleton className="w-52 h-3" />
+              <Skeleton className="w-32 h-2.5" />
+            </div>
+            <Skeleton className="w-20 h-3" />
+          </div>
+        ))}
+      </div>
+    )
   }
 
   return (

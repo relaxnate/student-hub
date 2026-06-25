@@ -6,7 +6,7 @@ import {
 } from 'date-fns'
 import { api } from '../../lib/ipc'
 import { cn, getDueUrgency } from '../../lib/utils'
-import { Spinner, SectionHeader } from '../../components/ui/Badge'
+import { Skeleton, SectionHeader } from '../../components/ui/Badge'
 import SmartReminders from './SmartReminders'
 import type { Assignment, Course, CalendarEvent } from '@shared/types/entities'
 
@@ -67,7 +67,23 @@ export default function Calendar() {
 
   const selectedDayEvents = selectedDay ? eventMap.get(format(selectedDay, 'yyyy-MM-dd')) ?? [] : []
 
-  if (loading) return <div className="flex items-center justify-center h-full"><Spinner size={20} /></div>
+  if (loading) return (
+    <div className="h-full flex gap-0">
+      <div className="flex-1 p-6 space-y-4">
+        <Skeleton className="w-48 h-6" />
+        <div className="grid grid-cols-7 gap-1">
+          {Array.from({ length: 35 }).map((_, i) => (
+            <Skeleton key={i} className="h-16 rounded-lg" />
+          ))}
+        </div>
+      </div>
+      <div className="w-80 border-l border-white/5 p-4 space-y-3">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Skeleton key={i} className="w-full h-20 rounded-xl" />
+        ))}
+      </div>
+    </div>
+  )
 
   return (
     <div className="h-full flex flex-col overflow-hidden">

@@ -12,7 +12,7 @@ import {
 } from 'lucide-react'
 import { api } from '../../lib/ipc'
 import { cn, formatDueDate, percentToLetter } from '../../lib/utils'
-import { Badge, Spinner, EmptyState, SectionHeader } from '../../components/ui/Badge'
+import { Badge, Skeleton, EmptyState, SectionHeader } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import type { Course, Assignment, Grade, AssignmentGroup } from '@shared/types/entities'
 
@@ -335,7 +335,23 @@ export default function GpaCalculator() {
   }
 
   if (loading) {
-    return <div className="flex items-center justify-center h-full"><Spinner size={20} /></div>
+    return (
+      <div className="p-6 max-w-4xl mx-auto space-y-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="rounded-xl bg-surface-800 border border-white/5 p-4 space-y-3">
+            <div className="flex items-center gap-3">
+              <Skeleton className="w-5 h-5 rounded-md" />
+              <Skeleton className="w-40 h-4" />
+              <div className="ml-auto flex gap-2">
+                <Skeleton className="w-12 h-4" />
+                <Skeleton className="w-12 h-4" />
+              </div>
+            </div>
+            <Skeleton className="w-full h-1.5 rounded-full" />
+          </div>
+        ))}
+      </div>
+    )
   }
 
   return (
