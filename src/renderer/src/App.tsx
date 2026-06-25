@@ -19,7 +19,13 @@ function AppBootstrap() {
   const { setProgress, setError, clearProgress } = useSyncStore()
 
   const initWorkspace = useWorkspaceStore(s => s.initialize)
-  useEffect(() => { initialize(); initWorkspace() }, [])
+  useEffect(() => {
+    initialize()
+    initWorkspace()
+    // Apply legacy-ui attribute from localStorage so CSS overrides are active immediately.
+    const on = localStorage.getItem('sh.legacy-ui') === '1'
+    document.documentElement.dataset.legacyUi = on ? 'true' : 'false'
+  }, [])
 
   useEffect(() => {
     const appearance = preferences?.appearance

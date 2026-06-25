@@ -77,8 +77,9 @@ export default function Settings() {
           {SECTIONS.map(s => (
             <li key={s.id}>
               <button onClick={() => setSection(s.id)}
-                className={cn('w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-sm transition-colors',
-                  section === s.id ? 'bg-accent-500/15 text-accent-400' : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5')}>
+                className={cn('relative w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-sm transition-colors',
+                  section === s.id ? 'text-accent-400 font-medium' : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5')}>
+                {section === s.id && <span className="absolute left-0 top-1 bottom-1 w-0.5 rounded-r-sm bg-accent-400" />}
                 {s.icon}<span>{s.label}</span>
               </button>
             </li>
@@ -129,6 +130,14 @@ export default function Settings() {
 
 // ─── General ──────────────────────────────────────────────────────────────────
 function GeneralSection({ prefs, onSave }: { prefs: AppPreferences; onSave: (p: Partial<AppPreferences>) => void }) {
+  const [legacyUi, setLegacyUi] = useState(() => localStorage.getItem('sh.legacy-ui') === '1')
+
+  const toggleLegacy = (v: boolean) => {
+    setLegacyUi(v)
+    localStorage.setItem('sh.legacy-ui', v ? '1' : '')
+    document.documentElement.dataset.legacyUi = v ? 'true' : 'false'
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -145,6 +154,18 @@ function GeneralSection({ prefs, onSave }: { prefs: AppPreferences; onSave: (p: 
         />
         <p className="text-2xs text-zinc-600 pl-0.5 pt-1">
           OFF by default — only your current active courses are shown. Turn ON if you want to see all semesters everywhere.
+        </p>
+      </div>
+
+      <div className="space-y-1">
+        <ToggleRow
+          label="Legacy UI"
+          description="Revert to the pre-Phase 2 interface style. Takes effect immediately without restarting."
+          value={legacyUi}
+          onChange={toggleLegacy}
+        />
+        <p className="text-2xs text-zinc-600 pl-0.5 pt-1">
+          Use this if you prefer the original look while Phase 2 is being refined.
         </p>
       </div>
     </div>
