@@ -58,8 +58,10 @@
   --r-2xl:     1rem;
   --r-3xl:     1.5rem;
 
-  /* Active font stack (overridden per data-font below) */
-  --font-sans: 'Inter', system-ui, sans-serif;
+  /* Active font stack (overridden per data-font below). 'Inter Variable' is the
+     self-hosted Fontsource family bundled in main.tsx; 'Inter'/system-ui are
+     fallbacks while the variable file loads or if a user has Inter installed. */
+  --font-sans: 'Inter Variable', 'Inter', system-ui, sans-serif;
 
   /* Text rem multiplier */
   --font-scale: 1;
@@ -178,7 +180,7 @@
 
 /* ─── Font families ──────────────────────────────────────────────────────────── */
 [data-font='system']   { --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; }
-[data-font='sans']     { --font-sans: 'Inter', system-ui, sans-serif; }
+[data-font='sans']     { --font-sans: 'Inter Variable', 'Inter', system-ui, sans-serif; }
 [data-font='mono']     { --font-sans: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace; }
 [data-font='dyslexic'] { --font-sans: 'OpenDyslexic', 'Comic Sans MS', 'Inter', system-ui, sans-serif; }
 
