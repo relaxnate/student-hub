@@ -135,7 +135,8 @@ function GeneralSection({ prefs, onSave }: { prefs: AppPreferences; onSave: (p: 
   const toggleLegacy = (v: boolean) => {
     setLegacyUi(v)
     localStorage.setItem('sh.legacy-ui', v ? '1' : '')
-    document.documentElement.dataset.legacyUi = v ? 'true' : 'false'
+    // data-ui="legacy" swaps the redesign token set back to the pre-redesign one.
+    document.documentElement.dataset.ui = v ? 'legacy' : 'new'
   }
 
   return (

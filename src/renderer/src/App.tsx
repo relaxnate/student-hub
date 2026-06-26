@@ -22,9 +22,10 @@ function AppBootstrap() {
   useEffect(() => {
     initialize()
     initWorkspace()
-    // Apply legacy-ui attribute from localStorage so CSS overrides are active immediately.
-    const on = localStorage.getItem('sh.legacy-ui') === '1'
-    document.documentElement.dataset.legacyUi = on ? 'true' : 'false'
+    // Phase-2 design is the default (data-ui="new"); Legacy UI swaps token sets.
+    // Read the stored preference so the right token set is active before paint.
+    const legacy = localStorage.getItem('sh.legacy-ui') === '1'
+    document.documentElement.dataset.ui = legacy ? 'legacy' : 'new'
   }, [])
 
   useEffect(() => {

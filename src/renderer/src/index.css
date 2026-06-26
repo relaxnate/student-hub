@@ -69,6 +69,15 @@
   /* Motion: global transition speed (default matches Tailwind's 150ms) */
   --motion-duration: 150ms;
 
+  /* Phase-2 motion tokens — desktop easing curves (monotonic, NO spring/bounce)
+     + fixed fast durations. Components reference these for consistent motion. */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);   /* entering — decelerate */
+  --ease-in:  cubic-bezier(0.4, 0, 1, 1);        /* leaving — accelerate */
+  --ease-std: cubic-bezier(0.4, 0, 0.2, 1);      /* standard in-out */
+  --dur-fast: 100ms;                             /* hover / color */
+  --dur:      150ms;                             /* panel / dropdown */
+  --dur-slow: 200ms;                             /* modal / larger surfaces */
+
   /* Layout: sidebar width (overridden per data-sidebar) */
   --sidebar-width: 13rem;
 
@@ -83,15 +92,20 @@
   --glass-opacity: 0.08;
 }
 
-/* ─── Theme: Dark (default) ──────────────────────────────────────────────────── */
+/* ─── Theme: Dark (default) — "quiet" neutral near-black ladder ──────────────── */
+/* Phase-2 redesign ladder. Near-neutral (minimal blue cast) with clean, even
+   luminance steps so elevation reads via lightness, not shadows (Linear/Raycast
+   model). Semantic roles: 950=window/base · 900=sidebar/nav · 800=card/panel ·
+   700=elevated/hover · 600=overlay/selected · 500=input/raised-line.
+   Legacy values are restored under [data-ui='legacy'] further below. */
 :root,
 [data-theme='dark'] {
-  --surface-950: 8 8 12;
-  --surface-900: 14 14 20;
-  --surface-800: 22 22 31;
-  --surface-700: 30 30 42;
-  --surface-600: 38 38 53;
-  --surface-500: 50 50 74;
+  --surface-950: 8 8 10;
+  --surface-900: 11 11 13;
+  --surface-800: 17 17 20;
+  --surface-700: 25 25 29;
+  --surface-600: 35 35 41;
+  --surface-500: 47 47 55;
 
   --zinc-50:  250 250 250;
   --zinc-100: 244 244 245;
@@ -150,6 +164,21 @@
   --zinc-800: 39 39 42;
   --zinc-900: 24 24 27;
   --zinc-950: 9 9 11;
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   LEGACY UI — restores the exact pre-redesign dark surface ladder.
+   The Phase-2 redesign is the default; toggling Legacy UI sets data-ui="legacy"
+   on <html> and this block swaps the surface tokens back. Components that change
+   structure (sidebar/dashboard) handle their own legacy fallback separately.
+   ════════════════════════════════════════════════════════════════════════════ */
+[data-ui='legacy'][data-theme='dark'] {
+  --surface-950: 8 8 12;
+  --surface-900: 14 14 20;
+  --surface-800: 22 22 31;
+  --surface-700: 30 30 42;
+  --surface-600: 38 38 53;
+  --surface-500: 50 50 74;
 }
 
 /* ─── Corner styles ──────────────────────────────────────────────────────────── */
@@ -339,6 +368,25 @@ body {
   h3 { @apply text-base font-medium; }
   h4 { @apply text-sm font-medium; }
 }
+
+/* Phase-2 type scale — the 6 canonical UI text styles. rem-based so they scale
+   with the accessibility font-size setting. Headers get slightly tighter
+   tracking; the smallest sizes get slightly positive tracking to stay legible on
+   dark surfaces (Raycast model). Apply a zinc text-color class for hierarchy.
+   In @layer components so an explicit Tailwind text-* utility can still override. */
+@layer components {
+  .t-display    { font-size: 1.25rem;   font-weight: 600; letter-spacing: -0.012em; line-height: 1.25; }
+  .t-heading    { font-size: 0.9375rem; font-weight: 600; letter-spacing: -0.006em; line-height: 1.3; }
+  .t-subheading { font-size: 0.8125rem; font-weight: 500; letter-spacing: 0;        line-height: 1.4; }
+  .t-body       { font-size: 0.8125rem; font-weight: 400; letter-spacing: 0;        line-height: 1.5; }
+  .t-caption    { font-size: 0.75rem;   font-weight: 400; letter-spacing: 0.005em;  line-height: 1.45; }
+  .t-micro      { font-size: 0.6875rem; font-weight: 400; letter-spacing: 0.01em;   line-height: 1.4; }
+}
+
+/* Numeric data — grades, percentages, GPA, dates. Inter's tabular figures lock
+   to a fixed width for column alignment; slashed-zero disambiguates 0 from O.
+   This is the correct "data reads as data" treatment — NOT a monospace font. */
+.tnum { font-variant-numeric: tabular-nums slashed-zero; }
 
 /* ─── Focus rings (secondary-accent driven) ──────────────────────────────────── */
 :focus-visible {
