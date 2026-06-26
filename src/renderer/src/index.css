@@ -305,9 +305,9 @@ html .transition-transform {
 /* ════════════════════════════════════════════════════════════════════════════
    LAYOUT — sidebar width per mode (Sidebar.tsx adapts its content to the mode)
    ════════════════════════════════════════════════════════════════════════════ */
-[data-sidebar='compact']  { --sidebar-width: 3.75rem; }
-[data-sidebar='standard'] { --sidebar-width: 13rem; }
-[data-sidebar='expanded'] { --sidebar-width: 16rem; }
+[data-sidebar='compact']  { --sidebar-width: 3rem; }     /* 48px — icons only */
+[data-sidebar='standard'] { --sidebar-width: 13.75rem; } /* 220px — default */
+[data-sidebar='expanded'] { --sidebar-width: 16.25rem; } /* 260px — wide */
 
 /* Density — compresses or relaxes padding/gap/space throughout the app */
 [data-density='comfortable'] { --density-mult: 1.18; }
@@ -333,11 +333,14 @@ body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: rgb(var(--surface-900));
+  /* Phase-2: window = base (deepest). Sidebar shares this; cards lift to -800. */
+  background: rgb(var(--surface-950));
   color: rgb(var(--zinc-200));
   user-select: none;  /* desktop app — no text selection by default */
   transition: background-color 0.2s ease, color 0.2s ease;
 }
+/* Legacy UI kept the lighter window background. */
+[data-ui='legacy'] body { background: rgb(var(--surface-900)); }
 
 /* Allow selection in content areas */
 .selectable, p, h1, h2, h3, h4, h5, h6, span, li, td, th, input, textarea {

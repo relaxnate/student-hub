@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { NavLink } from 'react-router-dom'
+import { formatDistanceToNowStrict } from 'date-fns'
 import {
   DndContext, PointerSensor, useSensor, useSensors,
   closestCenter, DragEndEvent,
@@ -20,8 +21,9 @@ import { useWorkspaceStore } from '../../store/workspace.store'
 import { useSyncStore } from '../../store/sync.store'
 import { api } from '../../lib/ipc'
 import type { NavItemId, SidebarItemConfig, SidebarSection } from '@shared/types/ipc'
+import type { IntegrationProvider } from '@shared/types/entities'
 
-// ─── Icon map ─────────────────────────────────────────────────────────────────
+// ─── Maps ─────────────────────────────────────────────────────────────────────
 
 const NAV_ICONS: Record<NavItemId, React.ReactNode> = {
   'dashboard':        <LayoutDashboard size={16} />,
@@ -51,7 +53,20 @@ const NAV_ROUTES: Record<NavItemId, string> = {
   'history':          '/history',
 }
 
-// ─── Single sortable nav item ─────────────────────────────────────────────────
+const PROVIDER_META: Record<IntegrationProvider, { short: string; color: string }> = {
+  'canvas':           { short: 'Canvas',    color: '#E66000' },
+  'google-classroom': { short: 'Classroom', color: '#4285F4' },
+  'microsoft-teams':  { short: 'Teams',     color: '#6264A7' },
+  'moodle':           { short: 'Moodle',    color: '#F98012' },
+  'blackboard':       { short: 'Blackboard',color: '#9AA0A6' },
+  'schoology':        { short: 'Schoology', color: '#1A8FE3' },
+  'google-calendar':  { short: 'Calendar',  color: '#4285F4' },
+  'outlook-calendar': { short: 'Outlook',   color: '#0078D4' },
+}
+
+// ─── Nav item (sortable) ──────────────────────────────────────────────────────
+// Default = secondary text on transparent. Hover = elevated surface + primary
+// text. Active = accent tint + 2px left bar + accent text (no bold). Per spec.
 
 function SortableNavItem({ item, compact }: { item: SidebarItemConfig; compact: boolean }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
@@ -67,35 +82,34 @@ function SortableNavItem({ item, compact }: { item: SidebarItemConfig; compact: 
     <li ref={setNodeRef} style={style} className="relative group">
       <NavLink
         to={NAV_ROUTES[item.id]}
-        className={({ isActive }) => cn(
-          'relative flex items-center rounded-md text-sm transition-colors duration-100',
-          compact ? 'justify-center px-0 py-2' : 'gap-2.5 px-2.5 py-1.5',
-          isActive
-            ? 'text-accent-400 font-medium'
-            : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5'
-        )}
         title={compact ? item.label : undefined}
+        className={({ isActive }) => cn(
+          'relative flex items-center h-8 rounded-md text-[13px] transition-colors duration-100',
+          compact ? 'justify-center px-0' : 'gap-2 px-3',
+          isActive
+            ? 'bg-accent-500/[0.12] text-accent-400'
+            : 'text-zinc-400 hover:bg-surface-700 hover:text-zinc-100'
+        )}
       >
         {({ isActive }) => (
           <>
             {isActive && !compact && (
-              <span className="absolute left-0 top-1 bottom-1 w-0.5 rounded-r-sm bg-accent-400" />
+              <span className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-r-full bg-accent-400" />
             )}
             <span className="shrink-0">{NAV_ICONS[item.id]}</span>
             {!compact && <span className="flex-1 truncate">{item.label}</span>}
             {!compact && item.id === 'simulator' && (
-              <span className="shrink-0 px-1 py-px rounded text-[11px] font-bold leading-none tracking-wide bg-accent-500/20 text-accent-400 border border-accent-500/30">
+              <span className="shrink-0 px-1 py-px rounded-[4px] t-micro font-semibold bg-accent-500/15 text-accent-400">
                 PRO
               </span>
             )}
           </>
         )}
       </NavLink>
-      {/* Drag handle — only visible on hover in non-compact mode */}
       {!compact && (
         <button
           {...listeners} {...attributes}
-          className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 cursor-grab active:cursor-grabbing text-zinc-600 hover:text-zinc-400 p-0.5 touch-none"
+          className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 cursor-grab active:cursor-grabbing text-zinc-700 hover:text-zinc-400 p-0.5 touch-none"
           title="Drag to reorder"
         >
           <GripVertical size={12} />
@@ -110,15 +124,75 @@ function SortableNavItem({ item, compact }: { item: SidebarItemConfig; compact: 
 function SectionHeader({ section, collapsed, onToggle, compact }: {
   section: SidebarSection; collapsed: boolean; onToggle: () => void; compact: boolean
 }) {
-  if (compact) return <div className="my-1 border-t border-white/8" />
+  if (compact) return <div className="my-1.5 mx-2 border-t border-white/[0.06]" />
   return (
-    <div className="flex items-center gap-1 px-2 pt-3 pb-1 cursor-pointer group" onClick={onToggle}>
-      <span className="text-2xs font-semibold text-zinc-600 uppercase tracking-wider flex-1 truncate">
+    <div className="flex items-center gap-1 px-3 pt-4 pb-1 cursor-pointer group select-none" onClick={onToggle}>
+      <span className="t-micro font-semibold text-zinc-600 uppercase tracking-[0.08em] flex-1 truncate">
         {section.label}
       </span>
       {collapsed
-        ? <ChevronRight size={10} className="text-zinc-600" />
-        : <ChevronDown size={10} className="text-zinc-600" />}
+        ? <ChevronRight size={11} className="text-zinc-700 group-hover:text-zinc-500" />
+        : <ChevronDown  size={11} className="text-zinc-700 group-hover:text-zinc-500" />}
+    </div>
+  )
+}
+
+// ─── Sync status (bottom) ──────────────────────────────────────────────────────
+
+function SyncStatus({ compact, syncing, error, lastSyncedAt, onSync }: {
+  compact: boolean; syncing: boolean; error: boolean; lastSyncedAt: number | null; onSync: () => void
+}) {
+  const dot = error ? 'bg-red-500' : syncing ? 'bg-amber-500' : 'bg-green-500'
+  const label = error ? 'Sync failed'
+    : syncing ? 'Syncing…'
+    : lastSyncedAt ? `Synced ${formatDistanceToNowStrict(lastSyncedAt, { addSuffix: true })}`
+    : 'Not synced yet'
+
+  return (
+    <button onClick={onSync} disabled={syncing}
+      title={compact ? label : 'Sync now'}
+      className={cn(
+        'group flex items-center h-8 rounded-md text-[13px] transition-colors duration-100 w-full',
+        'text-zinc-500 hover:bg-surface-700 hover:text-zinc-200 disabled:hover:bg-transparent',
+        compact ? 'justify-center px-0' : 'gap-2 px-3'
+      )}
+    >
+      <span className="relative shrink-0 flex items-center justify-center w-4 h-4">
+        {syncing
+          ? <Loader2 size={13} className="animate-spin text-amber-500" />
+          : <span className={cn('w-2 h-2 rounded-full', dot)} />}
+      </span>
+      {!compact && <span className="flex-1 text-left truncate t-caption">{label}</span>}
+      {!compact && !syncing && (
+        <RefreshCw size={12} className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+      )}
+    </button>
+  )
+}
+
+// ─── Integration badges (bottom) ───────────────────────────────────────────────
+
+function IntegrationBadges({ providers, compact }: { providers: IntegrationProvider[]; compact: boolean }) {
+  if (!providers.length) return null
+  const unique = Array.from(new Set(providers))
+  if (compact) {
+    return (
+      <div className="flex items-center justify-center gap-1 py-1">
+        {unique.map(p => (
+          <span key={p} title={PROVIDER_META[p]?.short} className="w-1.5 h-1.5 rounded-full"
+            style={{ background: PROVIDER_META[p]?.color ?? '#888' }} />
+        ))}
+      </div>
+    )
+  }
+  return (
+    <div className="flex flex-wrap items-center gap-1 px-3 py-1.5">
+      {unique.map(p => (
+        <span key={p} className="inline-flex items-center gap-1 t-micro text-zinc-500">
+          <span className="w-1.5 h-1.5 rounded-full" style={{ background: PROVIDER_META[p]?.color ?? '#888' }} />
+          {PROVIDER_META[p]?.short ?? p}
+        </span>
+      ))}
     </div>
   )
 }
@@ -129,14 +203,22 @@ export function Sidebar() {
   const integrations = useAppStore(s => s.integrations)
   const setIsSyncing = useAppStore(s => s.setIsSyncing)
   const sidebarMode  = useAppStore(s => s.preferences?.appearance?.sidebarMode ?? 'standard')
-  const { progress } = useSyncStore()
+  const { progress, errors } = useSyncStore()
   const ws           = useWorkspaceStore()
   const active       = ws.active()
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set())
+  const [version, setVersion] = useState('')
+
+  useEffect(() => {
+    api.app.getVersion().then((r: { ok: boolean; data: string }) => { if (r.ok) setVersion(r.data) })
+  }, [])
 
   const hasIntegrations = integrations.length > 0
-  const isSyncing       = Object.keys(progress).length > 0
+  const syncing         = Object.keys(progress).length > 0
+  const hasError        = Object.values(errors).some(Boolean)
   const compact         = sidebarMode === 'compact'
+  const lastSyncedAt    = integrations.reduce<number | null>(
+    (max, i) => (i.lastSyncedAt && (!max || i.lastSyncedAt > max) ? i.lastSyncedAt : max), null)
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
 
@@ -169,68 +251,51 @@ export function Sidebar() {
     })
   }
 
-  const visibleItems = active.sidebarItems
-    .filter(i => i.visible)
-    .sort((a, b) => a.order - b.order)
-
-  // Group items by section
-  const sections = active.sidebarSections.slice().sort((a, b) => a.order - b.order)
-  const ungrouped = visibleItems.filter(i => !i.sectionId)
+  const visibleItems = active.sidebarItems.filter(i => i.visible).sort((a, b) => a.order - b.order)
+  const sections     = active.sidebarSections.slice().sort((a, b) => a.order - b.order)
+  const ungrouped    = visibleItems.filter(i => !i.sectionId)
   const getGroupedItems = (sectionId: string) => visibleItems.filter(i => i.sectionId === sectionId)
 
-  const rowClass = (isActive: boolean) => cn(
-    'flex items-center rounded-md text-sm transition-colors duration-100',
-    compact ? 'justify-center px-0 py-2' : 'gap-2.5 px-2.5 py-1.5',
-    isActive
-      ? 'text-accent-400 font-medium'
-      : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5'
+  const bottomRow = (isActive: boolean) => cn(
+    'flex items-center h-8 rounded-md text-[13px] transition-colors duration-100 w-full',
+    compact ? 'justify-center px-0' : 'gap-2 px-3',
+    isActive ? 'bg-accent-500/[0.12] text-accent-400' : 'text-zinc-400 hover:bg-surface-700 hover:text-zinc-100'
   )
 
   return (
-    <aside className="flex flex-col h-full w-[--sidebar-width] bg-surface-900 border-r border-white/5 shrink-0">
-      {/* Logo */}
-      <div className={cn('h-10 flex items-center border-b border-white/5 shrink-0',
-        compact ? 'justify-center px-0' : 'px-4')}>
-        <div className={cn('flex items-center', compact ? '' : 'gap-2.5')}>
-          <div className="w-6 h-6 rounded-md bg-accent-500 flex items-center justify-center shrink-0">
-            <GraduationCap size={13} className="text-white" />
-          </div>
-          {!compact && (
-            <span className="text-sm font-semibold text-zinc-100 tracking-tight">Student Hub</span>
-          )}
+    <aside className="flex flex-col h-full w-[--sidebar-width] bg-surface-950 border-r border-white/[0.06] shrink-0">
+      {/* App header */}
+      <div className={cn('flex items-center border-b border-white/[0.06] shrink-0 h-14',
+        compact ? 'justify-center px-0' : 'px-3 gap-2.5')}>
+        <div className="w-7 h-7 rounded-lg bg-accent-500 flex items-center justify-center shrink-0">
+          <GraduationCap size={15} className="text-white" />
         </div>
+        {!compact && (
+          <div className="min-w-0">
+            <p className="t-heading text-zinc-100 leading-tight truncate">Student Hub</p>
+            {version && <p className="t-micro text-zinc-600 leading-tight">v{version}</p>}
+          </div>
+        )}
       </div>
 
-      {/* Navigation with DnD */}
-      <nav className="flex-1 px-2 py-3 overflow-y-auto overflow-x-hidden">
+      {/* Navigation */}
+      <nav className="flex-1 px-2 py-2 overflow-y-auto overflow-x-hidden">
         {hasIntegrations ? (
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-            <SortableContext
-              items={visibleItems.map(i => i.id)}
-              strategy={verticalListSortingStrategy}>
+            <SortableContext items={visibleItems.map(i => i.id)} strategy={verticalListSortingStrategy}>
               <ul className="space-y-0.5">
-                {/* Ungrouped items */}
-                {ungrouped.map(item => (
-                  <SortableNavItem key={item.id} item={item} compact={compact} />
-                ))}
-                {/* Sections */}
+                {ungrouped.map(item => <SortableNavItem key={item.id} item={item} compact={compact} />)}
                 {sections.map(section => {
                   const sectionItems = getGroupedItems(section.id)
                   if (!sectionItems.length) return null
                   const isCollapsed = collapsedSections.has(section.id)
                   return (
                     <li key={section.id}>
-                      <SectionHeader
-                        section={section}
-                        collapsed={isCollapsed}
-                        onToggle={() => toggleSection(section.id)}
-                        compact={compact}
-                      />
+                      <SectionHeader section={section} collapsed={isCollapsed} compact={compact}
+                        onToggle={() => toggleSection(section.id)} />
                       {!isCollapsed && (
                         <ul className="space-y-0.5">
-                          {sectionItems.map(item => (
-                            <SortableNavItem key={item.id} item={item} compact={compact} />
-                          ))}
+                          {sectionItems.map(item => <SortableNavItem key={item.id} item={item} compact={compact} />)}
                         </ul>
                       )}
                     </li>
@@ -241,7 +306,7 @@ export function Sidebar() {
           </DndContext>
         ) : (
           !compact && (
-            <p className="text-2xs text-zinc-600 px-2 py-3 leading-relaxed">
+            <p className="t-caption text-zinc-600 px-3 py-3 leading-relaxed">
               Connect a learning platform to get started.
             </p>
           )
@@ -249,27 +314,20 @@ export function Sidebar() {
       </nav>
 
       {/* Bottom */}
-      <div className="px-2 pb-3 space-y-1 border-t border-white/5 pt-2">
+      <div className="px-2 pb-2 pt-1.5 border-t border-white/[0.06] space-y-0.5">
+        {hasIntegrations && <IntegrationBadges providers={integrations.map(i => i.provider)} compact={compact} />}
         {hasIntegrations && (
-          <button onClick={handleSyncAll} disabled={isSyncing}
-            title={compact ? 'Sync now' : undefined}
-            className={cn(rowClass(false), 'w-full disabled:opacity-50 disabled:cursor-not-allowed')}>
-            <span className="shrink-0">
-              {isSyncing
-                ? <Loader2 size={14} className="animate-spin text-accent-400" />
-                : <RefreshCw size={14} />}
-            </span>
-            {!compact && <span>{isSyncing ? 'Syncing...' : 'Sync now'}</span>}
-          </button>
+          <SyncStatus compact={compact} syncing={syncing} error={hasError}
+            lastSyncedAt={lastSyncedAt} onSync={handleSyncAll} />
         )}
         <NavLink to="/settings/integrations" title={compact ? 'Add platform' : undefined}
-          className={({ isActive }) => cn(rowClass(isActive), 'w-full')}>
-          <span className="shrink-0"><Plus size={14} /></span>
+          className={({ isActive }) => bottomRow(isActive)}>
+          <span className="shrink-0"><Plus size={16} /></span>
           {!compact && <span>Add platform</span>}
         </NavLink>
         <NavLink to="/settings" end title={compact ? 'Settings' : undefined}
-          className={({ isActive }) => cn(rowClass(isActive), 'w-full')}>
-          <span className="shrink-0"><Settings size={14} /></span>
+          className={({ isActive }) => bottomRow(isActive)}>
+          <span className="shrink-0"><Settings size={16} /></span>
           {!compact && <span>Settings</span>}
         </NavLink>
       </div>
