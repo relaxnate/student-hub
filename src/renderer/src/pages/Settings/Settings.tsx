@@ -137,6 +137,8 @@ function GeneralSection({ prefs, onSave }: { prefs: AppPreferences; onSave: (p: 
     localStorage.setItem('sh.legacy-ui', v ? '1' : '')
     // data-ui="legacy" swaps the redesign token set back to the pre-redesign one.
     document.documentElement.dataset.ui = v ? 'legacy' : 'new'
+    // Notify components that branch on UI mode (e.g. Dashboard) to switch live.
+    window.dispatchEvent(new Event('sh-ui-mode-change'))
   }
 
   return (

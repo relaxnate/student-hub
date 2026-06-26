@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -21,7 +21,9 @@ import { Skeleton, Badge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import { useAppStore } from '../../store/app.store'
 import { useWorkspaceStore } from '../../store/workspace.store'
-import type { Course, Assignment, Grade } from '@shared/types/entities'
+import { useUiMode } from '../../lib/useUiMode'
+import DashboardHome from './DashboardHome'
+import { useDashboardData, type DashboardData } from './useDashboardData'
 import type { WidgetConfig, WidgetSize, WidgetType } from '@shared/types/ipc'
 
 // ─── Widget meta ──────────────────────────────────────────────────────────────
@@ -46,49 +48,6 @@ const SIZE_LABELS: Record<WidgetSize, string> = {
 // Rather than each widget fetching independently, we load once at the top and
 // pass data down as props. This avoids N×M parallel requests.
 
-interface DashboardData {
-  courses:     Course[]
-  assignments: (Assignment & { course?: Course; grade?: Grade })[]
-  loading:     boolean
-}
-
-function useDashboardData(isSyncing: boolean, showHistory: boolean): DashboardData {
-  const [courses,     setCourses]     = useState<Course[]>([])
-  const [assignments, setAssignments] = useState<(Assignment & { course?: Course; grade?: Grade })[]>([])
-  const [loading,     setLoading]     = useState(true)
-
-  useEffect(() => {
-    let cancelled = false
-    const load = async () => {
-      setLoading(true)
-      const cRes = await (showHistory ? api.courses.getAllIncludingInactive() : api.courses.getAll())
-      if (!cRes.ok || cancelled) { setLoading(false); return }
-      const courseList = cRes.data
-      const courseMap  = new Map(courseList.map((c: Course) => [c.id, c]))
-      if (!cancelled) setCourses(courseList)
-
-      const all: (Assignment & { course?: Course; grade?: Grade })[] = []
-      await Promise.all(courseList.map(async (c: Course) => {
-        const [aRes, gRes] = await Promise.all([
-          api.assignments.getByCourse(c.id),
-          api.grades.getByCourse(c.id),
-        ])
-        if (cancelled) return
-        const gMap = new Map((gRes.ok ? gRes.data : []).map((g: Grade) => [g.assignmentId, g]))
-        if (aRes.ok) aRes.data.forEach((a: Assignment) => all.push({
-          ...a,
-          course: courseMap.get(a.courseId) as Course | undefined,
-          grade:  gMap.get(a.id) as Grade | undefined,
-        }))
-      }))
-      if (!cancelled) { setAssignments(all); setLoading(false) }
-    }
-    load()
-    return () => { cancelled = true }
-  }, [isSyncing, showHistory])
-
-  return { courses, assignments, loading }
-}
 
 // ─── Widget toolbar ───────────────────────────────────────────────────────────
 
@@ -465,7 +424,7 @@ function RestoreTray({ hidden, onRestore }: {
 
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 
-export default function Dashboard() {
+function LegacyDashboard() {
   const isSyncing    = useAppStore(s => s.isSyncing)
   const ws           = useWorkspaceStore()
   const active       = ws.active()
@@ -606,4 +565,12 @@ export default function Dashboard() {
       </button>
     </motion.div>
   )
+}
+
+// ─── Route entry ──────────────────────────────────────────────────────────────
+// Phase-2 redesign uses the focused fixed layout (DashboardHome). Legacy UI keeps
+// the customizable widget dashboard above.
+
+export default function Dashboard() {
+  return useUiMode() === 'legacy' ? <LegacyDashboard /> : <DashboardHome />
 }
