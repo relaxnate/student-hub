@@ -330,6 +330,86 @@ export interface CalendarEvent {
   syncedAt: number
 }
 
+// ─── Reminder ────────────────────────────────────────────────────────────────
+// User-created calendar reminder (local-only, never synced). `date` is an ISO
+// calendar date 'YYYY-MM-DD'; `time` is a local 'HH:MM' or null for all-day.
+// `reminderMinutesBefore` is how long before the event the OS notification fires.
+
+export type ReminderRepeat = 'none' | 'daily' | 'weekly' | 'monthly'
+
+export interface Reminder {
+  id: string
+  title: string
+  date: string                       // 'YYYY-MM-DD' local
+  time: string | null                // 'HH:MM' local, or null = all-day
+  reminderMinutesBefore: number
+  color: string                      // hex
+  repeat: ReminderRepeat
+  courseId: string | null            // optional link to a synced course
+  assignmentId: string | null        // optional link to a synced assignment
+  createdAt: number
+  updatedAt: number
+}
+
+// One concrete dated instance of a reminder (a recurring reminder expands into
+// many). `occurrenceDate` equals `date` for non-repeating reminders. This is the
+// shape the calendar renders; recurrence is expanded once, in the main process.
+export interface ReminderOccurrence extends Reminder {
+  occurrenceDate: string             // 'YYYY-MM-DD' this instance falls on
+}
+
+// Fields accepted when creating a reminder (server fills id/timestamps/defaults).
+export interface CreateReminderInput {
+  title: string
+  date: string
+  time?: string | null
+  reminderMinutesBefore?: number
+  color?: string
+  repeat?: ReminderRepeat
+  courseId?: string | null
+  assignmentId?: string | null
+}
+
+// ─── Dashboard widgets (schema v6) ─────────────────────────────────────────────
+
+export type WidgetMode = 'grid' | 'free'
+
+// One dashboard layout (currently a single 'default'). `layoutJson` is the
+// serialized react-grid-layout array for grid mode.
+export interface WidgetLayout {
+  id: string
+  mode: WidgetMode
+  layoutJson: string
+  updatedAt: number
+}
+
+// A widget placed on a layout. In grid mode posX/posY are grid coords and
+// width/height are column/row spans; in free mode posX/posY are PERCENT of the
+// canvas and width/height are pixels. `configJson` is per-instance config.
+export interface WidgetInstance {
+  id: string
+  layoutId: string
+  widgetType: string
+  title: string | null
+  configJson: string
+  posX: number
+  posY: number
+  width: number
+  height: number
+  isLocked: boolean
+  updatedAt: number
+}
+
+// A user-uploaded image for the CustomImageWidget. `filePath` is always within
+// userData/widget-assets/ (never an absolute path outside userData).
+export interface UserWidgetAsset {
+  id: string
+  name: string
+  filePath: string
+  fileType: string
+  createdAt: number
+}
+
 // ─── Sync ───────────────────────────────────────────────────────────────────
 
 export type SyncStatus = 'idle' | 'running' | 'success' | 'error' | 'partial'

@@ -114,6 +114,34 @@ export const IPC = {
     GET_RANGE:            'calendar:get-range',
   },
 
+  // Reminders (local user-created calendar reminders)
+  REMINDERS: {
+    GET_RANGE:            'reminders:get-range',   // by date window (YYYY-MM-DD strings)
+    GET_ALL:              'reminders:get-all',
+    CREATE:               'reminders:create',
+    UPDATE:               'reminders:update',
+    DELETE:               'reminders:delete',
+  },
+
+  // OS Notifications
+  NOTIFICATIONS: {
+    // main → renderer: a clicked OS notification asks the UI to navigate
+    // (payload: { route: string }). Subscribed via api.notifications.onNavigate.
+    NAVIGATE:             'notifications:navigate',
+  },
+
+  // Dashboard widget system (schema v6)
+  WIDGETS: {
+    GET_LAYOUT:           'widgets:get-layout',       // → WidgetLayout (creates default if absent)
+    SAVE_LAYOUT:          'widgets:save-layout',      // { mode?, layoutJson? }
+    GET_INSTANCES:        'widgets:get-instances',    // → WidgetInstance[]
+    SAVE_INSTANCE:        'widgets:save-instance',    // WidgetInstance (upsert)
+    REMOVE_INSTANCE:      'widgets:remove-instance',  // id
+    UPLOAD_ASSET:         'widgets:upload-asset',     // opens file dialog, copies into userData → UserWidgetAsset
+    GET_ASSETS:           'widgets:get-assets',       // → UserWidgetAsset[]
+    DELETE_ASSET:         'widgets:delete-asset',     // id (also removes the copied file)
+  },
+
   // Grade Rescue Mode
   GRADE_RESCUE: {
     GET_ALL: 'grade-rescue:get-all',

@@ -12,6 +12,12 @@ import type {
   Quiz,
   Grade,
   CalendarEvent,
+  Reminder,
+  ReminderOccurrence,
+  CreateReminderInput,
+  WidgetLayout,
+  WidgetInstance,
+  UserWidgetAsset,
   SyncProgress,
   SyncLog,
   WhatIfScore,
@@ -114,6 +120,35 @@ export type ColorblindMode = 'none' | 'protanopia' | 'deuteranopia' | 'tritanopi
 export type LineSpacing    = 'normal' | 'relaxed' | 'loose'
 export type MotionLevel    = 'smooth' | 'standard' | 'snappy' | 'reduced'
 export type SidebarMode    = 'compact' | 'standard' | 'expanded'
+// Overall navigation form (Phase 3 nav-type system). Orthogonal to sidebarMode
+// (which only sizes the vertical sidebar). standard = full vertical sidebar;
+// rail = icon-only vertical rail with hover flyout labels; dock = horizontal top
+// bar (no vertical sidebar); palette = ultra-slim launcher rail, ⌘K-driven nav.
+export type NavType        = 'standard' | 'rail' | 'dock' | 'palette'
+
+// Browser-style tab (Phase 4). Persisted via app preferences (keys `tabs` /
+// `activeTabId`), like workspace profiles — no DB table needed.
+export interface AppTab {
+  id:    string
+  route: string   // hash route this tab is showing, e.g. '/courses'
+  title: string   // display label, derived from the route
+}
+
+// ── Per-component surface styling (glass / translucency) ──
+// Each named surface can be styled independently: keep the default token, paint
+// a solid custom colour, or go translucent "glass" (semi-transparent tint +
+// backdrop blur) which reveals the user's background image/colour behind it.
+export type SurfaceId   = 'sidebar' | 'tabs' | 'titlebar' | 'content' | 'card'
+export type SurfaceMode = 'default' | 'solid' | 'glass'
+
+export interface SurfaceStyle {
+  mode:    SurfaceMode
+  color:   string   // hex tint; '' = the surface's built-in colour
+  opacity: number   // 0–100 translucency (used by solid alpha + glass)
+  blur:    number   // px backdrop blur (glass only)
+}
+
+export type SurfaceStyles = Record<SurfaceId, SurfaceStyle>
 export type DensityMode      = 'comfortable' | 'balanced' | 'compact'
 export type EffectsPreset    = 'minimal' | 'balanced' | 'modern' | 'glass' | 'performance'
 export type WorkspaceMode    = 'default' | 'study' | 'planner' | 'exam' | 'minimal'
@@ -172,6 +207,16 @@ export interface AppearanceSettings {
 
   // ── Layout (Phase 4) ──
   sidebarMode:        SidebarMode
+  // Custom drag-resized sidebar width in px. null = use the preset for the
+  // current sidebarMode (compact/standard/expanded). Ignored in compact mode.
+  sidebarWidth:       number | null
+  // Overall navigation form. Only applies to the standard vertical sidebar when
+  // 'standard'; rail/dock/palette restructure navigation (see NavType).
+  navType:            NavType
+  // Browser-style tab bar (Phase 4). Opt-in; off = single-view navigation.
+  tabsEnabled:        boolean
+  // Per-component glass/translucency + colour customization (one entry per surface).
+  surfaces:           SurfaceStyles
 
   // ── Density (Phase 5) ──
   density:            DensityMode
@@ -281,6 +326,12 @@ export type {
   Quiz,
   Grade,
   CalendarEvent,
+  Reminder,
+  ReminderOccurrence,
+  CreateReminderInput,
+  WidgetLayout,
+  WidgetInstance,
+  UserWidgetAsset,
   SyncProgress,
   SyncLog,
   WhatIfScore,
@@ -341,6 +392,8 @@ export interface PagePreferences {
   gradesLayout:      GradesLayout
 }
 
+export type DashboardView = 'focused' | 'widgets'
+
 export interface WorkspaceProfile {
   id:             string
   name:           string
@@ -350,6 +403,9 @@ export interface WorkspaceProfile {
   sidebarSections:SidebarSection[]
   pagePrefs:      PagePreferences
   dashboardShowHistoryCourses: boolean
+  // Which dashboard surface to show in the new (non-legacy) UI: the focused
+  // fixed layout, or the customizable react-grid-layout widget canvas (Phase 2).
+  dashboardView:  DashboardView
   createdAt:      number
   updatedAt:      number
 }

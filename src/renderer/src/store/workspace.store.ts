@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { api } from '../lib/ipc'
 import type {
   WorkspaceProfile, WidgetConfig, SidebarItemConfig, SidebarSection, PagePreferences,
-  NavItemId,
+  NavItemId, DashboardView,
 } from '@shared/types/ipc'
 
 // ─── Defaults ─────────────────────────────────────────────────────────────────
@@ -50,6 +50,7 @@ export const DEFAULT_WORKSPACE: WorkspaceProfile = {
   sidebarSections: [],
   pagePrefs:       DEFAULT_PAGE_PREFS,
   dashboardShowHistoryCourses: false,
+  dashboardView:   'focused',
   createdAt:       Date.now(),
   updatedAt:       Date.now(),
 }
@@ -113,6 +114,9 @@ interface WorkspaceStoreState {
 
   // Dashboard history toggle (per-workspace, independent of global setting)
   setDashboardShowHistory: (v: boolean) => void
+
+  // Dashboard surface: focused fixed layout vs. customizable widget canvas
+  setDashboardView: (v: DashboardView) => void
 }
 
 // ─── Store ─────────────────────────────────────────────────────────────────────
@@ -235,6 +239,10 @@ export const useWorkspaceStore = create<WorkspaceStoreState>((set, get) => {
 
     updatePagePrefs: (patch) => {
       patchActive(p => ({ ...p, pagePrefs: { ...p.pagePrefs, ...patch } }))
+    },
+
+    setDashboardView: (v) => {
+      patchActive(p => ({ ...p, dashboardView: v }))
     },
 
     setDashboardShowHistory: (v) => {

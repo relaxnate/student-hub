@@ -9,6 +9,7 @@ import { applyAppearance, watchSystemTheme, framerReducedMotion, DEFAULT_APPEARA
 import { ColorblindFilters } from './components/ui/ColorblindFilters'
 import { TooltipProvider } from './components/ui/Tooltip'
 import { useWorkspaceStore } from './store/workspace.store'
+import { useTabsStore } from './store/tabs.store'
 import type { SyncProgress } from '@shared/types/ipc'
 
 function AppBootstrap() {
@@ -20,9 +21,11 @@ function AppBootstrap() {
   const { setProgress, setError, clearProgress } = useSyncStore()
 
   const initWorkspace = useWorkspaceStore(s => s.initialize)
+  const initTabs      = useTabsStore(s => s.initialize)
   useEffect(() => {
     initialize()
     initWorkspace()
+    initTabs()
     // Phase-2 design is the default (data-ui="new"); Legacy UI swaps token sets.
     // Read the stored preference so the right token set is active before paint.
     const legacy = localStorage.getItem('sh.legacy-ui') === '1'
@@ -43,6 +46,13 @@ function AppBootstrap() {
     const offComplete = api.sync.onComplete(({ integrationId }: { integrationId: string }) => { clearProgress(integrationId); setIsSyncing(false) })
     const offError    = api.sync.onError(({ integrationId, error }: { integrationId: string; error: string }) => { setError(integrationId, error); clearProgress(integrationId); setIsSyncing(false) })
     return () => { offProgress(); offComplete(); offError() }
+  }, [])
+
+  // A clicked OS notification (e.g. a reminder) asks the app to navigate.
+  useEffect(() => {
+    return api.notifications.onNavigate(({ route }: { route: string }) => {
+      router.navigate(route)
+    })
   }, [])
 
   useEffect(() => {

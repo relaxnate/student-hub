@@ -17,12 +17,14 @@ import {
 } from 'lucide-react'
 import { api } from '../../lib/ipc'
 import { cn, formatDueDate, getDueUrgency } from '../../lib/utils'
+import { useCumulativeGpa } from './useCumulativeGpa'
 import { Skeleton, Badge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import { useAppStore } from '../../store/app.store'
 import { useWorkspaceStore } from '../../store/workspace.store'
 import { useUiMode } from '../../lib/useUiMode'
 import DashboardHome from './DashboardHome'
+import DashboardCanvas from './DashboardCanvas'
 import { useDashboardData, type DashboardData } from './useDashboardData'
 import type { WidgetConfig, WidgetSize, WidgetType } from '@shared/types/ipc'
 
@@ -255,11 +257,13 @@ function GradesContent({ data }: { data: DashboardData }) {
   )
 }
 
-function GpaContent({ data }: { data: DashboardData }) {
-  const graded = data.courses.filter(c => c.currentScore != null)
-  const gpa = graded.length
-    ? graded.reduce((s, c) => s + (c.currentScore! / 100) * 4.0, 0) / graded.length
-    : null
+function GpaContent({ data: _data }: { data: DashboardData }) {
+  // GPA is cumulative: computed over ALL courses (current + history) via
+  // useCumulativeGpa, independent of this dashboard's "Show history courses"
+  // display toggle (BUG-011). BUG-010 fix (standard breakpoint scale) lives in
+  // lib/gpa. `data` is intentionally unused now.
+  const isSyncing = useAppStore(s => s.isSyncing)
+  const gpa = useCumulativeGpa(isSyncing)
   return (
     <div className="p-3 text-center">
       {gpa !== null ? (
@@ -568,9 +572,13 @@ function LegacyDashboard() {
 }
 
 // ─── Route entry ──────────────────────────────────────────────────────────────
-// Phase-2 redesign uses the focused fixed layout (DashboardHome). Legacy UI keeps
-// the customizable widget dashboard above.
+// Legacy UI → the old customizable widget-card dashboard (LegacyDashboard).
+// New UI → either the focused fixed layout (DashboardHome) or the Phase-2
+// customizable react-grid-layout widget canvas (DashboardCanvas), chosen by the
+// per-workspace `dashboardView` setting.
 
 export default function Dashboard() {
-  return useUiMode() === 'legacy' ? <LegacyDashboard /> : <DashboardHome />
+  const view = useWorkspaceStore(s => s.active().dashboardView)
+  if (useUiMode() === 'legacy') return <LegacyDashboard />
+  return view === 'widgets' ? <DashboardCanvas /> : <DashboardHome />
 }

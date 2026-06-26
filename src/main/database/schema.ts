@@ -15,7 +15,94 @@
 // they reference is guaranteed to exist by then — regardless of whether the
 // install is brand new or upgrading from an older schema version.
 
-export const CURRENT_SCHEMA_VERSION = 4
+export const CURRENT_SCHEMA_VERSION = 6
+
+// Dashboard widget system — dual-mode (grid/free) layouts, widget instances, and
+// user-uploaded image assets (schema v6). Standalone const so the v6 migration in
+// ./index.ts can re-run the identical idempotent DDL on an existing database.
+export const WIDGET_TABLES_SQL = `
+-- ─── Widget Layouts ────────────────────────────────────────────────────────────
+-- One row per dashboard layout (currently a single 'default' layout). Stores the
+-- active mode and the serialized react-grid-layout array for grid mode.
+CREATE TABLE IF NOT EXISTS widget_layouts (
+  id          TEXT PRIMARY KEY,
+  mode        TEXT NOT NULL DEFAULT 'grid' CHECK (mode IN ('grid','free')),
+  layout_json TEXT NOT NULL DEFAULT '[]',
+  updated_at  INTEGER NOT NULL
+);
+
+-- ─── Widget Instances ──────────────────────────────────────────────────────────
+-- Each widget placed on a layout. pos_x/pos_y are GRID coordinates in grid mode
+-- and PERCENT-of-canvas in free mode (so free layouts survive window resizes);
+-- width/height are grid spans (grid) or pixels (free). config_json is the
+-- per-instance widget configuration.
+CREATE TABLE IF NOT EXISTS widget_instances (
+  id          TEXT PRIMARY KEY,
+  layout_id   TEXT NOT NULL REFERENCES widget_layouts(id) ON DELETE CASCADE,
+  widget_type TEXT NOT NULL,
+  title       TEXT,
+  config_json TEXT NOT NULL DEFAULT '{}',
+  pos_x       REAL NOT NULL DEFAULT 0,
+  pos_y       REAL NOT NULL DEFAULT 0,
+  width       INTEGER NOT NULL DEFAULT 4,
+  height      INTEGER NOT NULL DEFAULT 4,
+  is_locked   INTEGER NOT NULL DEFAULT 0,
+  updated_at  INTEGER NOT NULL
+);
+
+-- ─── User Widget Assets ────────────────────────────────────────────────────────
+-- References to images the user uploads for the CustomImageWidget. file_path is
+-- ALWAYS within app.getPath('userData')/widget-assets/ — never an absolute path
+-- outside userData, and the file content itself is never stored in the DB.
+CREATE TABLE IF NOT EXISTS user_widget_assets (
+  id         TEXT PRIMARY KEY,
+  name       TEXT NOT NULL,
+  file_path  TEXT NOT NULL,
+  file_type  TEXT NOT NULL,
+  created_at INTEGER NOT NULL
+);
+`
+
+// Calendar reminders + OS-notification scheduling (schema v5). Standalone const
+// so the v5 migration in ./index.ts can re-run the exact same DDL on an existing
+// database (idempotent IF NOT EXISTS) without duplicating/drifting definitions.
+export const REMINDER_TABLES_SQL = `
+-- ─── Reminders ─────────────────────────────────────────────────────────────────
+-- User-created calendar reminders. Entirely local (never synced to any LMS).
+-- 'date' is an ISO calendar date (YYYY-MM-DD), 'time' is a local HH:MM or NULL
+-- for an all-day reminder. 'reminder_minutes_before' is how long before the
+-- event the OS notification should fire. 'repeat' drives recurrence. The optional
+-- course_id / assignment_id let a reminder be attached to synced Canvas data;
+-- they are intentionally NOT foreign keys (a reminder must survive the deletion /
+-- re-sync of the course or assignment it references).
+CREATE TABLE IF NOT EXISTS reminders (
+  id                      TEXT PRIMARY KEY,
+  title                   TEXT NOT NULL,
+  date                    TEXT NOT NULL,           -- 'YYYY-MM-DD' (local)
+  time                    TEXT,                    -- 'HH:MM' local, or NULL = all-day
+  reminder_minutes_before INTEGER NOT NULL DEFAULT 15,
+  color                   TEXT NOT NULL DEFAULT '#6366f1',
+  repeat                  TEXT NOT NULL DEFAULT 'none',  -- none|daily|weekly|monthly
+  course_id               TEXT,
+  assignment_id           TEXT,
+  created_at              INTEGER NOT NULL,
+  updated_at              INTEGER NOT NULL
+);
+
+-- ─── Scheduled Notifications ───────────────────────────────────────────────────
+-- The durable record of WHEN a reminder's OS notification is due to fire, so the
+-- main process can recover pending notifications after a restart and avoid
+-- firing the same one twice. One row per (reminder, occurrence-fire-time).
+-- 'scheduled_at' is a unix-ms wall-clock instant; 'fired_at' is set once shown.
+CREATE TABLE IF NOT EXISTS scheduled_notifications (
+  id            TEXT PRIMARY KEY,
+  reminder_id   TEXT NOT NULL REFERENCES reminders(id) ON DELETE CASCADE,
+  scheduled_at  INTEGER NOT NULL,
+  fired_at      INTEGER,
+  created_at    INTEGER NOT NULL,
+  UNIQUE(reminder_id, scheduled_at)
+);
+`
 
 // Academic Outcome Simulator tables (schema v4). Defined as a standalone const
 // so the migration in ./index.ts can re-run the exact same DDL on an existing
@@ -297,6 +384,8 @@ CREATE TABLE IF NOT EXISTS what_if_scores (
   updated_at         INTEGER NOT NULL
 );
 ${SIMULATION_TABLES_SQL}
+${REMINDER_TABLES_SQL}
+${WIDGET_TABLES_SQL}
 `
 
 // All indexes, run AFTER migrations (see ./index.ts initDb) so that every
@@ -334,4 +423,11 @@ CREATE INDEX IF NOT EXISTS idx_calendar_start_at ON calendar_events(start_at);
 
 CREATE INDEX IF NOT EXISTS idx_simulation_scores_scenario   ON simulation_scores(scenario_id);
 CREATE INDEX IF NOT EXISTS idx_simulation_scores_assignment ON simulation_scores(assignment_id);
+
+CREATE INDEX IF NOT EXISTS idx_reminders_date ON reminders(date);
+
+CREATE INDEX IF NOT EXISTS idx_scheduled_notifications_reminder  ON scheduled_notifications(reminder_id);
+CREATE INDEX IF NOT EXISTS idx_scheduled_notifications_scheduled ON scheduled_notifications(scheduled_at);
+
+CREATE INDEX IF NOT EXISTS idx_widget_instances_layout ON widget_instances(layout_id);
 `

@@ -309,6 +309,44 @@ html .transition-transform {
 [data-sidebar='standard'] { --sidebar-width: 13.75rem; } /* 220px — default */
 [data-sidebar='expanded'] { --sidebar-width: 16.25rem; } /* 260px — wide */
 
+/* Nav-type system (Phase 3). navType overrides the sidebar form. rail/palette
+   pin a fixed width regardless of the sidebarMode preset; dock has no vertical
+   sidebar (DockNav renders a horizontal bar instead). */
+[data-nav='rail']    { --sidebar-width: 4rem; }    /* 64px — icon rail + flyout */
+[data-nav='palette'] { --sidebar-width: 3.25rem; } /* 52px — launcher rail */
+
+/* ════════════════════════════════════════════════════════════════════════════
+   PER-COMPONENT SURFACES (glass / translucency / per-surface colour)
+   Each `.surface-{id}` falls back to its built-in token until appearance.ts sets
+   `--surf-{id}-bg` / `--surf-{id}-filter`. Translucent (glass) backgrounds reveal
+   the fixed app background (image/colour) painted behind the content layer.
+   ════════════════════════════════════════════════════════════════════════════ */
+.surface-sidebar {
+  background: var(--surf-sidebar-bg, rgb(var(--surface-950)));
+  -webkit-backdrop-filter: var(--surf-sidebar-filter, none);
+  backdrop-filter: var(--surf-sidebar-filter, none);
+}
+.surface-tabs {
+  background: var(--surf-tabs-bg, rgb(var(--surface-950)));
+  -webkit-backdrop-filter: var(--surf-tabs-filter, none);
+  backdrop-filter: var(--surf-tabs-filter, none);
+}
+.surface-titlebar {
+  background: var(--surf-titlebar-bg, rgb(var(--surface-950)));
+  -webkit-backdrop-filter: var(--surf-titlebar-filter, none);
+  backdrop-filter: var(--surf-titlebar-filter, none);
+}
+.surface-content {
+  background: var(--surf-content-bg, transparent);
+  -webkit-backdrop-filter: var(--surf-content-filter, none);
+  backdrop-filter: var(--surf-content-filter, none);
+}
+.surface-card {
+  background: var(--surf-card-bg, rgb(var(--surface-800)));
+  -webkit-backdrop-filter: var(--surf-card-filter, none);
+  backdrop-filter: var(--surf-card-filter, none);
+}
+
 /* Density — compresses or relaxes padding/gap/space throughout the app */
 [data-density='comfortable'] { --density-mult: 1.18; }
 [data-density='balanced']    { --density-mult: 1; }
@@ -359,6 +397,10 @@ body {
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover { background: rgb(var(--accent2) / 0.55); }
+
+/* Hide the scrollbar on the horizontal dock nav while keeping it scrollable. */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { scrollbar-width: none; }
 
 /* ─── Drag region for custom titlebar ─────────────────────────────────────── */
 .drag-region { -webkit-app-region: drag; }

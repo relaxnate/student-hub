@@ -27,8 +27,8 @@ export function Titlebar() {
   return (
     <div
       className={cn(
-        'drag-region fixed top-0 left-0 right-0 z-50 flex items-center justify-between',
-        'h-10 px-4 bg-surface-950 border-b border-white/[0.06]'
+        'surface-titlebar drag-region fixed top-0 left-0 right-0 z-50 flex items-center justify-between',
+        'h-10 px-4 border-b border-white/[0.06]'
       )}
     >
       {/* App name */}

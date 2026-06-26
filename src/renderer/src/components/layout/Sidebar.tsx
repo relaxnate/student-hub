@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import { formatDistanceToNowStrict } from 'date-fns'
 import {
@@ -10,10 +10,8 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import {
-  LayoutDashboard, BookOpen, Layers, ClipboardList,
-  BarChart2, Calendar, FolderOpen, Settings,
-  RefreshCw, Loader2, GraduationCap, Plus, Calculator, ShieldAlert,
-  GripVertical, ChevronDown, ChevronRight, Archive, FlaskConical,
+  Settings, RefreshCw, Loader2, GraduationCap, Plus, Search, SlidersHorizontal,
+  GripVertical, ChevronDown, ChevronRight,
 } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import { useAppStore } from '../../store/app.store'
@@ -22,53 +20,20 @@ import { useSyncStore } from '../../store/sync.store'
 import { api } from '../../lib/ipc'
 import type { NavItemId, SidebarItemConfig, SidebarSection } from '@shared/types/ipc'
 import type { IntegrationProvider } from '@shared/types/entities'
+import { NAV_ICONS, NAV_ROUTES, PROVIDER_META, openCommandPalette, openSidebarSettings } from './navConfig'
 
-// ─── Maps ─────────────────────────────────────────────────────────────────────
-
-const NAV_ICONS: Record<NavItemId, React.ReactNode> = {
-  'dashboard':        <LayoutDashboard size={16} />,
-  'courses':          <BookOpen size={16} />,
-  'modules':          <Layers size={16} />,
-  'assignments':      <ClipboardList size={16} />,
-  'grades':           <BarChart2 size={16} />,
-  'grade-calculator': <Calculator size={16} />,
-  'grade-rescue':     <ShieldAlert size={16} />,
-  'simulator':        <FlaskConical size={16} />,
-  'calendar':         <Calendar size={16} />,
-  'files':            <FolderOpen size={16} />,
-  'history':          <Archive size={16} />,
-}
-
-const NAV_ROUTES: Record<NavItemId, string> = {
-  'dashboard':        '/dashboard',
-  'courses':          '/courses',
-  'modules':          '/modules',
-  'assignments':      '/assignments',
-  'grades':           '/grades',
-  'grade-calculator': '/grade-calculator',
-  'grade-rescue':     '/grade-rescue',
-  'simulator':        '/simulator',
-  'calendar':         '/calendar',
-  'files':            '/files',
-  'history':          '/history',
-}
-
-const PROVIDER_META: Record<IntegrationProvider, { short: string; color: string }> = {
-  'canvas':           { short: 'Canvas',    color: '#E66000' },
-  'google-classroom': { short: 'Classroom', color: '#4285F4' },
-  'microsoft-teams':  { short: 'Teams',     color: '#6264A7' },
-  'moodle':           { short: 'Moodle',    color: '#F98012' },
-  'blackboard':       { short: 'Blackboard',color: '#9AA0A6' },
-  'schoology':        { short: 'Schoology', color: '#1A8FE3' },
-  'google-calendar':  { short: 'Calendar',  color: '#4285F4' },
-  'outlook-calendar': { short: 'Outlook',   color: '#0078D4' },
-}
+// Drag-to-resize bounds (px). Custom width persists to appearance.sidebarWidth.
+const SIDEBAR_MIN = 180
+const SIDEBAR_MAX = 420
 
 // ─── Nav item (sortable) ──────────────────────────────────────────────────────
 // Default = secondary text on transparent. Hover = elevated surface + primary
 // text. Active = accent tint + 2px left bar + accent text (no bold). Per spec.
+// `rail` = icon-only but with a hover flyout label (richer than compact tooltips).
 
-function SortableNavItem({ item, compact }: { item: SidebarItemConfig; compact: boolean }) {
+function SortableNavItem({ item, compact, rail }: {
+  item: SidebarItemConfig; compact: boolean; rail?: boolean
+}) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: item.id })
 
@@ -82,7 +47,7 @@ function SortableNavItem({ item, compact }: { item: SidebarItemConfig; compact: 
     <li ref={setNodeRef} style={style} className="relative group">
       <NavLink
         to={NAV_ROUTES[item.id]}
-        title={compact ? item.label : undefined}
+        title={compact && !rail ? item.label : undefined}
         className={({ isActive }) => cn(
           'relative flex items-center h-8 rounded-md text-[13px] transition-colors duration-100',
           compact ? 'justify-center px-0' : 'gap-2 px-3',
@@ -106,6 +71,12 @@ function SortableNavItem({ item, compact }: { item: SidebarItemConfig; compact: 
           </>
         )}
       </NavLink>
+      {/* Rail flyout label — appears to the right on hover (icon rail UX). */}
+      {rail && (
+        <span className="pointer-events-none absolute left-full top-1/2 -translate-y-1/2 ml-1.5 z-30 hidden group-hover:flex items-center h-7 px-2.5 rounded-md bg-surface-700 border border-white/[0.08] text-[12px] text-zinc-100 whitespace-nowrap shadow-lg">
+          {item.label}
+        </span>
+      )}
       {!compact && (
         <button
           {...listeners} {...attributes}
@@ -202,12 +173,15 @@ function IntegrationBadges({ providers, compact }: { providers: IntegrationProvi
 export function Sidebar() {
   const integrations = useAppStore(s => s.integrations)
   const setIsSyncing = useAppStore(s => s.setIsSyncing)
+  const setAppearance = useAppStore(s => s.setAppearance)
   const sidebarMode  = useAppStore(s => s.preferences?.appearance?.sidebarMode ?? 'standard')
+  const navType      = useAppStore(s => s.preferences?.appearance?.navType ?? 'standard')
   const { progress, errors } = useSyncStore()
   const ws           = useWorkspaceStore()
   const active       = ws.active()
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set())
   const [version, setVersion] = useState('')
+  const asideRef = useRef<HTMLElement>(null)
 
   useEffect(() => {
     api.app.getVersion().then((r: { ok: boolean; data: string }) => { if (r.ok) setVersion(r.data) })
@@ -216,7 +190,9 @@ export function Sidebar() {
   const hasIntegrations = integrations.length > 0
   const syncing         = Object.keys(progress).length > 0
   const hasError        = Object.values(errors).some(Boolean)
-  const compact         = sidebarMode === 'compact'
+  const rail            = navType === 'rail'
+  // Rail renders icon-only (like compact) but with hover flyout labels.
+  const compact         = sidebarMode === 'compact' || rail
   const lastSyncedAt    = integrations.reduce<number | null>(
     (max, i) => (i.lastSyncedAt && (!max || i.lastSyncedAt > max) ? i.lastSyncedAt : max), null)
 
@@ -226,6 +202,36 @@ export function Sidebar() {
     setIsSyncing(true)
     await api.sync.startAll()
   }
+
+  // Drag the right edge to set a custom width: live-update the CSS var during
+  // the drag (cheap, no re-render), persist to appearance prefs on release.
+  const startResize = (e: React.PointerEvent) => {
+    if (compact) return
+    e.preventDefault()
+    const startX = e.clientX
+    const startWidth = asideRef.current?.getBoundingClientRect().width ?? 220
+    const root = document.documentElement
+    const prevSelect = document.body.style.userSelect
+    document.body.style.userSelect = 'none'
+    document.body.style.cursor = 'col-resize'
+    let finalWidth = startWidth
+    const onMove = (ev: PointerEvent) => {
+      finalWidth = Math.min(SIDEBAR_MAX, Math.max(SIDEBAR_MIN, startWidth + (ev.clientX - startX)))
+      root.style.setProperty('--sidebar-width', `${finalWidth}px`)
+    }
+    const onUp = () => {
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+      document.body.style.userSelect = prevSelect
+      document.body.style.cursor = ''
+      setAppearance({ sidebarWidth: Math.round(finalWidth) })
+    }
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp)
+  }
+
+  // Double-click the handle → clear the custom width, fall back to the preset.
+  const resetWidth = () => setAppearance({ sidebarWidth: null })
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active: dragActive, over } = event
@@ -262,8 +268,13 @@ export function Sidebar() {
     isActive ? 'bg-accent-500/[0.12] text-accent-400' : 'text-zinc-400 hover:bg-surface-700 hover:text-zinc-100'
   )
 
+  // Palette nav type → render the slim launcher rail instead of the full sidebar.
+  if (navType === 'palette') {
+    return <PaletteRail syncing={syncing} error={hasError} onSync={handleSyncAll} />
+  }
+
   return (
-    <aside className="flex flex-col h-full w-[--sidebar-width] bg-surface-950 border-r border-white/[0.06] shrink-0">
+    <aside ref={asideRef} className="surface-sidebar relative flex flex-col h-full w-[--sidebar-width] border-r border-white/[0.06] shrink-0">
       {/* App header */}
       <div className={cn('flex items-center border-b border-white/[0.06] shrink-0 h-14',
         compact ? 'justify-center px-0' : 'px-3 gap-2.5')}>
@@ -284,7 +295,7 @@ export function Sidebar() {
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
             <SortableContext items={visibleItems.map(i => i.id)} strategy={verticalListSortingStrategy}>
               <ul className="space-y-0.5">
-                {ungrouped.map(item => <SortableNavItem key={item.id} item={item} compact={compact} />)}
+                {ungrouped.map(item => <SortableNavItem key={item.id} item={item} compact={compact} rail={rail} />)}
                 {sections.map(section => {
                   const sectionItems = getGroupedItems(section.id)
                   if (!sectionItems.length) return null
@@ -295,7 +306,7 @@ export function Sidebar() {
                         onToggle={() => toggleSection(section.id)} />
                       {!isCollapsed && (
                         <ul className="space-y-0.5">
-                          {sectionItems.map(item => <SortableNavItem key={item.id} item={item} compact={compact} />)}
+                          {sectionItems.map(item => <SortableNavItem key={item.id} item={item} compact={compact} rail={rail} />)}
                         </ul>
                       )}
                     </li>
@@ -325,12 +336,87 @@ export function Sidebar() {
           <span className="shrink-0"><Plus size={16} /></span>
           {!compact && <span>Add platform</span>}
         </NavLink>
+        <button onClick={openSidebarSettings} title={compact ? 'Edit sidebar' : undefined}
+          className={bottomRow(false)}>
+          <span className="shrink-0"><SlidersHorizontal size={16} /></span>
+          {!compact && <span>Edit sidebar</span>}
+        </button>
         <NavLink to="/settings" end title={compact ? 'Settings' : undefined}
           className={({ isActive }) => bottomRow(isActive)}>
           <span className="shrink-0"><Settings size={16} /></span>
           {!compact && <span>Settings</span>}
         </NavLink>
       </div>
+
+      {/* Drag-to-resize handle — only the standard nav type / non-compact resizes. */}
+      {navType === 'standard' && !compact && (
+        <div
+          onPointerDown={startResize}
+          onDoubleClick={resetWidth}
+          title="Drag to resize · double-click to reset"
+          className="group/resize absolute top-0 right-0 z-20 h-full w-1.5 translate-x-1/2 cursor-col-resize"
+        >
+          <span className="absolute inset-y-0 right-1/2 w-px bg-transparent group-hover/resize:bg-accent-500/60 group-active/resize:bg-accent-500 transition-colors" />
+        </div>
+      )}
+    </aside>
+  )
+}
+
+// ─── Palette rail ──────────────────────────────────────────────────────────────
+// Ultra-slim launcher rail for the 'palette' nav type: logo, a ⌘K search button,
+// and the essentials at the bottom. Page navigation is driven by the command
+// palette, freeing the maximum amount of horizontal space for content.
+
+function PaletteRail({ syncing, error, onSync }: {
+  syncing: boolean; error: boolean; onSync: () => void
+}) {
+  const dot = error ? 'bg-red-500' : syncing ? 'bg-amber-500' : 'bg-green-500'
+  const iconBtn = 'group relative flex items-center justify-center w-9 h-9 mx-auto rounded-md ' +
+    'text-zinc-400 hover:bg-surface-700 hover:text-zinc-100 transition-colors'
+  const flyout = (label: string) => (
+    <span className="pointer-events-none absolute left-full top-1/2 -translate-y-1/2 ml-1.5 z-30 hidden group-hover:flex items-center h-7 px-2.5 rounded-md bg-surface-700 border border-white/[0.08] text-[12px] text-zinc-100 whitespace-nowrap shadow-lg">
+      {label}
+    </span>
+  )
+
+  return (
+    <aside className="surface-sidebar relative flex flex-col h-full w-[--sidebar-width] border-r border-white/[0.06] shrink-0 py-2">
+      <div className="flex items-center justify-center h-12 shrink-0">
+        <div className="w-7 h-7 rounded-lg bg-accent-500 flex items-center justify-center">
+          <GraduationCap size={15} className="text-white" />
+        </div>
+      </div>
+
+      <button onClick={openCommandPalette} title="Search · ⌘K" className={cn(iconBtn, 'mt-1')}>
+        <Search size={17} />
+        {flyout('Search · ⌘K')}
+      </button>
+
+      <div className="flex-1" />
+
+      <button onClick={onSync} disabled={syncing} className={iconBtn} title="Sync now">
+        <span className="relative flex items-center justify-center w-4 h-4">
+          {syncing
+            ? <Loader2 size={13} className="animate-spin text-amber-500" />
+            : <span className={cn('w-2 h-2 rounded-full', dot)} />}
+        </span>
+        {flyout('Sync now')}
+      </button>
+      <NavLink to="/settings/integrations" className={({ isActive }) =>
+        cn(iconBtn, isActive && 'bg-accent-500/[0.12] text-accent-400')} title="Add platform">
+        <Plus size={17} />
+        {flyout('Add platform')}
+      </NavLink>
+      <button onClick={openSidebarSettings} className={iconBtn} title="Edit sidebar">
+        <SlidersHorizontal size={17} />
+        {flyout('Edit sidebar')}
+      </button>
+      <NavLink to="/settings" end className={({ isActive }) =>
+        cn(iconBtn, isActive && 'bg-accent-500/[0.12] text-accent-400')} title="Settings">
+        <Settings size={17} />
+        {flyout('Settings')}
+      </NavLink>
     </aside>
   )
 }

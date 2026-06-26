@@ -54,7 +54,7 @@ export function Card({ children, className, variant = 'default', padding = true,
       onClick={onClick}
       className={cn(
         'rounded-lg',
-        variant === 'default'  && 'bg-surface-800 border border-white/[0.08]',
+        variant === 'default'  && 'surface-card border border-white/[0.08]',
         variant === 'flat'     && 'bg-surface-800/50 border border-white/[0.05]',
         variant === 'bordered' && 'bg-transparent border border-white/[0.10]',
         interactive && 'cursor-pointer transition-colors duration-100 hover:bg-surface-700 hover:border-white/[0.12] active:bg-surface-600',

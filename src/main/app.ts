@@ -68,7 +68,7 @@ app.whenReady().then(() => {
 
     initDb()
     restoreAdapters()
-    registerAllHandlers(oauthManager)  // pass the one shared instance
+    registerAllHandlers(oauthManager, notifications)  // pass the shared instances
 
     const win = createWindow()
 
@@ -83,6 +83,13 @@ app.whenReady().then(() => {
         const prefs = loadPreferences()
         if (prefs.notificationsEnabled) notifications.start(prefs)
         scheduler.start(prefs.syncIntervalMinutes, oauthManager, win)
+
+        // Focus-sync: when the user returns to the window after being away,
+        // refresh in the background if the data is stale (guarded internally).
+        win.on('focus', () => {
+          scheduler.syncOnFocus(oauthManager, win).catch(err =>
+            logDebug(`Focus-sync failed (non-fatal): ${err instanceof Error ? err.message : String(err)}`))
+        })
       } catch (err) {
         // Non-fatal — the window is already showing at this point, so this
         // is a background-feature failure, not a startup failure. Log only.

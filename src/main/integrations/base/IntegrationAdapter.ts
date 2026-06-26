@@ -113,6 +113,59 @@ export abstract class IntegrationAdapter {
 
   // ─── HTTP primitives ─────────────────────────────────────────────────────
 
+  private sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms))
+  }
+
+  // Exponential backoff with jitter: ~0.5s, 1s, 2s, …, capped at 8s.
+  private backoffMs(attempt: number): number {
+    const base = Math.min(8000, 500 * 2 ** (attempt - 1))
+    return base + Math.floor(Math.random() * 250)
+  }
+
+  /**
+   * fetch() with transparent retry on TRANSIENT failures only — network blips,
+   * HTTP 429 (honouring Retry-After), and 5xx server errors. Returns the
+   * Response for the caller to handle auth / ok / parsing; throws the
+   * appropriate typed error once retries are exhausted. Non-transient responses
+   * (4xx other than 429) return immediately so they aren't pointlessly retried.
+   */
+  private async fetchWithRetry(
+    url: string,
+    init: RequestInit,
+    maxAttempts = 3
+  ): Promise<Response> {
+    let attempt = 0
+    for (;;) {
+      attempt++
+      let response: Response
+      try {
+        response = await fetch(url, init)
+      } catch (cause) {
+        if (attempt < maxAttempts) { await this.sleep(this.backoffMs(attempt)); continue }
+        throw new NetworkError(cause)
+      }
+
+      if (response.status === 429) {
+        const retryAfter = response.headers.get('Retry-After')
+        const retryAfterMs = retryAfter ? parseInt(retryAfter) * 1000 : 60_000
+        if (attempt < maxAttempts) {
+          await this.sleep(Math.min(retryAfter ? retryAfterMs : this.backoffMs(attempt), 30_000))
+          continue
+        }
+        throw new RateLimitError(retryAfterMs)
+      }
+
+      // Transient server errors — worth another try.
+      if (response.status >= 500 && attempt < maxAttempts) {
+        await this.sleep(this.backoffMs(attempt))
+        continue
+      }
+
+      return response
+    }
+  }
+
   protected async request<T>(
     urlOrPath: string,
     options: RequestInit = {}
@@ -123,27 +176,17 @@ export abstract class IntegrationAdapter {
       ? urlOrPath
       : `${this.baseUrl}${urlOrPath}`
 
-    let response: Response
-    try {
-      response = await fetch(url, {
-        ...options,
-        headers: {
-          'Authorization': `Bearer ${this.accessToken}`,
-          'Accept':        'application/json',
-          'Content-Type':  'application/json',
-          ...options.headers,
-        },
-      })
-    } catch (cause) {
-      throw new NetworkError(cause)
-    }
+    const response = await this.fetchWithRetry(url, {
+      ...options,
+      headers: {
+        'Authorization': `Bearer ${this.accessToken}`,
+        'Accept':        'application/json',
+        'Content-Type':  'application/json',
+        ...options.headers,
+      },
+    })
 
     if (response.status === 401) throw new TokenExpiredError()
-
-    if (response.status === 429) {
-      const retryAfter = response.headers.get('Retry-After')
-      throw new RateLimitError(retryAfter ? parseInt(retryAfter) * 1000 : 60_000)
-    }
 
     if (!response.ok) {
       const body = await response.text().catch(() => '')
@@ -165,7 +208,7 @@ export abstract class IntegrationAdapter {
     let nextUrl: string | null = `${this.baseUrl}${initialPath}`
 
     while (nextUrl) {
-      const response = await fetch(nextUrl, {
+      const response = await this.fetchWithRetry(nextUrl, {
         ...options,
         headers: {
           'Authorization': `Bearer ${this.accessToken}`,

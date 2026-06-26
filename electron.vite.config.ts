@@ -34,6 +34,15 @@ export default defineConfig({
 
   renderer: {
     plugins: [react()],
+    // The renderer is sandboxed (contextIsolation on, nodeIntegration off) so there is no
+    // `process` global. Vite/esbuild auto-replaces `process.env.NODE_ENV` during dep
+    // optimization but leaves other `process.env.*` keys as bare `process` references.
+    // react-draggable reads `process.env.DRAGGABLE_DEBUG`, which crashed the app with
+    // "ReferenceError: process is not defined" (BUG-013). Statically replace it here.
+    define: {
+      'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development'),
+      'process.env.DRAGGABLE_DEBUG': 'undefined'
+    },
     resolve: {
       alias: {
         '@renderer': resolve('src/renderer/src'),

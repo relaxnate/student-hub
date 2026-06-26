@@ -10,6 +10,11 @@ export class BackgroundSyncScheduler {
   private timer:      ReturnType<typeof setInterval> | null = null
   private engine:     SyncEngine
   private isBusy:     boolean = false
+  private lastSyncAt: number = 0
+
+  // Minimum gap before a window-focus event is allowed to trigger a sync, so
+  // refocusing the window repeatedly doesn't hammer the LMS.
+  private static FOCUS_STALE_MS = 10 * 60 * 1000
 
   constructor() {
     this.engine = new SyncEngine()
@@ -23,6 +28,9 @@ export class BackgroundSyncScheduler {
     this.stop()
 
     const ms = Math.max(intervalMinutes, 5) * 60 * 1000   // minimum 5 min
+    // Treat startup as "just synced" so refocusing right after launch doesn't
+    // immediately fire a focus-sync; the staleness window starts from here.
+    this.lastSyncAt = Date.now()
     console.log(`[Scheduler] Auto-sync every ${intervalMinutes} min`)
 
     this.timer = setInterval(() => {
@@ -46,6 +54,18 @@ export class BackgroundSyncScheduler {
     this.start(intervalMinutes, oauthManager, window)
   }
 
+  /**
+   * Called when the app window regains focus. Runs a sync only if it has been a
+   * while since the last one, so data is fresh when the user returns — without
+   * syncing on every quick alt-tab.
+   */
+  async syncOnFocus(oauthManager: OAuthManager, window: BrowserWindow): Promise<void> {
+    if (this.isBusy) return
+    if (Date.now() - this.lastSyncAt < BackgroundSyncScheduler.FOCUS_STALE_MS) return
+    console.log('[Scheduler] Window focused after idle — refreshing')
+    await this.runSync(oauthManager, window)
+  }
+
   private async runSync(oauthManager: OAuthManager, window: BrowserWindow): Promise<void> {
     if (this.isBusy) {
       console.log('[Scheduler] Skipping — previous sync still running')
@@ -64,6 +84,7 @@ export class BackgroundSyncScheduler {
       )
     } finally {
       this.isBusy = false
+      this.lastSyncAt = Date.now()
       console.log('[Scheduler] Auto-sync complete')
     }
   }

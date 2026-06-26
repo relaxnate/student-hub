@@ -2,7 +2,7 @@ import Database from 'better-sqlite3'
 import { app } from 'electron'
 import path from 'path'
 import fs from 'fs'
-import { CREATE_TABLES_SQL, CREATE_INDEXES_SQL, CURRENT_SCHEMA_VERSION, SIMULATION_TABLES_SQL } from './schema'
+import { CREATE_TABLES_SQL, CREATE_INDEXES_SQL, CURRENT_SCHEMA_VERSION, SIMULATION_TABLES_SQL, REMINDER_TABLES_SQL, WIDGET_TABLES_SQL } from './schema'
 
 let _db: Database.Database | null = null
 
@@ -108,6 +108,21 @@ const MIGRATIONS: Record<number, MigrationFn> = {
   // how v3 introduced its new tables. Indexes are added by CREATE_INDEXES_SQL.
   4: (db) => {
     db.exec(SIMULATION_TABLES_SQL)
+  },
+  // v5: Calendar reminders + OS-notification scheduling. Two new tables
+  // (reminders, scheduled_notifications) — no column changes to existing tables.
+  // CREATE_TABLES_SQL already creates them on fresh installs; re-run the identical
+  // idempotent DDL here so an upgrading database also gets them. Indexes added by
+  // CREATE_INDEXES_SQL after migrations.
+  5: (db) => {
+    db.exec(REMINDER_TABLES_SQL)
+  },
+  // v6: Dashboard widget system. Three new tables (widget_layouts,
+  // widget_instances, user_widget_assets) — no column changes to existing tables.
+  // Idempotent IF NOT EXISTS DDL re-run for upgrading databases; indexes added by
+  // CREATE_INDEXES_SQL after migrations.
+  6: (db) => {
+    db.exec(WIDGET_TABLES_SQL)
   },
 }
 

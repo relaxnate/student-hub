@@ -7,15 +7,18 @@ import { api } from '../../lib/ipc'
 import {
   ACCENT_PRESETS, SECONDARY_PRESETS,
   SUCCESS_PRESETS, WARNING_PRESETS, ERROR_PRESETS, NOTIFICATION_PRESETS,
+  SURFACE_IDS, SURFACE_LABELS,
 } from '../../lib/appearance'
 import { cn } from '../../lib/utils'
 import { Button } from '../../components/ui/Button'
+import { Switch } from '../../components/ui/Controls'
+import { InstitutionAvatar } from '../../components/ui/InstitutionAvatar'
 import { AddPlatform } from '../../components/integrations/AddPlatform'
 import type { Integration, IntegrationProvider } from '@shared/types/entities'
 import type {
   AppPreferences, AppearanceSettings, ThemeMode, CornerStyle, FontFamily,
-  ContrastLevel, ColorblindMode, LineSpacing, MotionLevel, SidebarMode,
-  DensityMode, EffectsPreset, BackgroundType, BackgroundScaling, BackgroundSettings,
+  ContrastLevel, ColorblindMode, LineSpacing, MotionLevel, SidebarMode, NavType,
+  SurfaceId, SurfaceMode, DensityMode, EffectsPreset, BackgroundType, BackgroundScaling, BackgroundSettings,
   DashboardPanel, DashboardPanelId, WorkspaceMode,
 } from '@shared/types/ipc'
 import { format } from 'date-fns'
@@ -209,10 +212,7 @@ function IntegrationsSection({ integrations, onDisconnect, onAdd }: {
             const meta = PROVIDER_META[i.provider]
             return (
               <div key={i.id} className="flex items-center gap-3 p-3.5 rounded-xl bg-surface-800 border border-white/5">
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-bold text-sm shrink-0"
-                  style={{ background: meta?.color ?? '#6366f1' }}>
-                  {meta?.name[0] ?? i.provider[0].toUpperCase()}
-                </div>
+                <InstitutionAvatar name={i.displayName || meta?.name || i.provider} size={36} />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-zinc-200 truncate">{i.displayName}</p>
                   <p className="text-xs text-zinc-500">{i.lastSyncedAt ? `Last synced ${format(i.lastSyncedAt, 'MMM d, h:mm a')}` : 'Never synced'}</p>
@@ -559,6 +559,94 @@ function EffectsSection({ appearance, onAppearance }: {
       <p className="text-2xs text-zinc-600">
         "Performance" removes shadows and blur for maximum rendering speed — useful on integrated graphics.
       </p>
+
+      <SurfacesEditor appearance={appearance} onAppearance={onAppearance} />
+    </div>
+  )
+}
+
+// ─── Per-component surfaces (glass / translucency) ──────────────────────────────
+function SurfacesEditor({ appearance, onAppearance }: {
+  appearance: AppearanceSettings
+  onAppearance: (p: Partial<AppearanceSettings>) => void
+}) {
+  const setSurface = (id: SurfaceId, patch: Partial<AppearanceSettings['surfaces'][SurfaceId]>) =>
+    onAppearance({ surfaces: { ...appearance.surfaces, [id]: { ...appearance.surfaces[id], ...patch } } })
+
+  const modes: { value: SurfaceMode; label: string }[] = [
+    { value: 'default', label: 'Default' },
+    { value: 'solid',   label: 'Solid' },
+    { value: 'glass',   label: 'Glass' },
+  ]
+
+  return (
+    <div className="pt-2 border-t border-white/5">
+      <h3 className="text-sm font-semibold text-zinc-100 mb-1">Glass &amp; component colours</h3>
+      <p className="text-xs text-zinc-500 mb-4">
+        Style each part of the app individually. <b>Glass</b> makes a surface translucent so your
+        background image or colour shows through; <b>Solid</b> paints it a custom colour. Set a
+        background (Background tab) to see what shows behind glass surfaces.
+      </p>
+
+      <div className="space-y-3">
+        {SURFACE_IDS.map(id => {
+          const s = appearance.surfaces[id]
+          return (
+            <div key={id} className="rounded-lg bg-surface-800 border border-white/5 p-3.5">
+              <div className="flex items-center justify-between gap-3 mb-2.5">
+                <span className="text-xs font-medium text-zinc-200">{SURFACE_LABELS[id]}</span>
+                <div className="flex gap-1 p-0.5 rounded-md bg-surface-900 border border-white/5">
+                  {modes.map(m => (
+                    <button key={m.value} onClick={() => setSurface(id, { mode: m.value })}
+                      className={cn('px-2 py-1 rounded text-2xs font-medium transition-colors',
+                        s.mode === m.value ? 'bg-accent-500 text-white' : 'text-zinc-400 hover:text-zinc-100')}>
+                      {m.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {s.mode !== 'default' && (
+                <div className="flex flex-wrap items-center gap-x-5 gap-y-2.5 pt-1">
+                  {/* Colour */}
+                  <label className="flex items-center gap-2 text-2xs text-zinc-400">
+                    Colour
+                    <input type="color" value={s.color || '#888888'}
+                      onChange={e => setSurface(id, { color: e.target.value })}
+                      className="w-7 h-7 rounded cursor-pointer bg-transparent border border-white/10 p-0.5" />
+                    {s.color && (
+                      <button onClick={() => setSurface(id, { color: '' })}
+                        className="text-zinc-600 hover:text-zinc-300 underline">auto</button>
+                    )}
+                  </label>
+
+                  {/* Opacity (glass only) */}
+                  {s.mode === 'glass' && (
+                    <label className="flex items-center gap-2 text-2xs text-zinc-400">
+                      Opacity
+                      <input type="range" min={10} max={100} value={s.opacity}
+                        onChange={e => setSurface(id, { opacity: Number(e.target.value) })}
+                        className="w-24 accent-[rgb(var(--accent-500))]" />
+                      <span className="tabular-nums w-8 text-zinc-500">{s.opacity}%</span>
+                    </label>
+                  )}
+
+                  {/* Blur (glass only) */}
+                  {s.mode === 'glass' && (
+                    <label className="flex items-center gap-2 text-2xs text-zinc-400">
+                      Blur
+                      <input type="range" min={0} max={40} value={s.blur}
+                        onChange={e => setSurface(id, { blur: Number(e.target.value) })}
+                        className="w-24 accent-[rgb(var(--accent-500))]" />
+                      <span className="tabular-nums w-9 text-zinc-500">{s.blur}px</span>
+                    </label>
+                  )}
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }
@@ -575,9 +663,23 @@ function LayoutSection({ appearance, onAppearance }: {
         <p className="text-sm text-zinc-500">Adjust how the workspace is arranged.</p>
       </div>
 
+      <SegmentRow<NavType>
+        label="Navigation"
+        hint="Standard = labelled sidebar · Rail = icon rail with hover labels · Dock = horizontal top bar · Palette = slim ⌘K-driven launcher."
+        icon={<PanelLeft size={12} />}
+        options={[
+          { value: 'standard', label: 'Standard' },
+          { value: 'rail',     label: 'Rail' },
+          { value: 'dock',     label: 'Dock' },
+          { value: 'palette',  label: 'Palette' },
+        ]}
+        value={appearance.navType}
+        onChange={v => onAppearance({ navType: v })}
+      />
+
       <SegmentRow<SidebarMode>
-        label="Sidebar"
-        hint="Compact shows icons only; Expanded adds labels and connection info."
+        label="Sidebar width"
+        hint="Width of the Standard sidebar. Compact shows icons only; Expanded adds labels and connection info. (Standard navigation only.)"
         icon={<PanelLeft size={12} />}
         options={[
           { value: 'compact',  label: 'Compact' },
@@ -585,7 +687,8 @@ function LayoutSection({ appearance, onAppearance }: {
           { value: 'expanded', label: 'Expanded' },
         ]}
         value={appearance.sidebarMode}
-        onChange={v => onAppearance({ sidebarMode: v })}
+        // Clear any drag-resized custom width so the chosen preset takes effect.
+        onChange={v => onAppearance({ sidebarMode: v, sidebarWidth: null })}
       />
 
       <SegmentRow<DensityMode>
@@ -599,6 +702,13 @@ function LayoutSection({ appearance, onAppearance }: {
         ]}
         value={appearance.density}
         onChange={v => onAppearance({ density: v })}
+      />
+
+      <ToggleRow
+        label="Browser-style tabs"
+        description="Show a tab bar so you can keep multiple pages open and switch between them."
+        value={appearance.tabsEnabled}
+        onChange={v => onAppearance({ tabsEnabled: v })}
       />
 
       <DashboardPanelsEditor
@@ -1257,10 +1367,7 @@ function ToggleRow({ label, description, value, onChange }: {
         <p className="text-sm text-zinc-300 group-hover:text-zinc-100 transition-colors">{label}</p>
         {description && <p className="text-xs text-zinc-500">{description}</p>}
       </div>
-      <button role="switch" aria-checked={value} onClick={() => onChange(!value)}
-        className={cn('relative w-9 h-5 rounded-full transition-colors shrink-0', value ? 'bg-accent-500' : 'bg-surface-600')}>
-        <span className={cn('absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform', value ? 'translate-x-4' : 'translate-x-0')} />
-      </button>
+      <Switch checked={value} onChange={onChange} aria-label={label} />
     </label>
   )
 }

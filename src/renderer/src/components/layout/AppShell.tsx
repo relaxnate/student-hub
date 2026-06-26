@@ -2,13 +2,21 @@ import React from 'react'
 import { Outlet } from 'react-router-dom'
 import { Titlebar } from './Titlebar'
 import { Sidebar } from './Sidebar'
+import { DockNav } from './DockNav'
+import { TabBar } from './TabBar'
+import { SplitPane } from './SplitPane'
 import { SyncToast } from './SyncToast'
 import { UpdateToast } from './UpdateToast'
+import CommandPalette from './CommandPalette'
+import { SidebarSettingsDialog } from './SidebarSettingsDialog'
 import { useAppStore } from '../../store/app.store'
+import { useTabsStore } from '../../store/tabs.store'
 import { backgroundFilter, backgroundSizing } from '../../lib/appearance'
 
 export function AppShell() {
   const bg = useAppStore(s => s.preferences?.appearance?.background)
+  const navType = useAppStore(s => s.preferences?.appearance?.navType ?? 'standard')
+  const tabsEnabled = useAppStore(s => s.preferences?.appearance?.tabsEnabled ?? false)
   const active = !!bg && bg.type !== 'none' &&
     !(bg.type === 'image' && !bg.image)
 
@@ -26,16 +34,52 @@ export function AppShell() {
       {/* App content above the background */}
       <div className="relative z-10 flex flex-col h-full">
         <Titlebar />
-        <div className="flex flex-1 overflow-hidden mt-10">
-          <Sidebar />
-          <main className="flex-1 overflow-hidden relative" style={mainScrim}>
-            <Outlet />
-          </main>
-        </div>
+        {navType === 'dock' ? (
+          // Dock nav: horizontal bar above a full-width content area.
+          <div className="flex flex-col flex-1 overflow-hidden mt-10">
+            <DockNav />
+            <MainArea tabsEnabled={tabsEnabled} scrim={mainScrim} />
+          </div>
+        ) : (
+          // Vertical nav types (standard / rail / palette) — Sidebar adapts.
+          <div className="flex flex-1 overflow-hidden mt-10">
+            <Sidebar />
+            <MainArea tabsEnabled={tabsEnabled} scrim={mainScrim} />
+          </div>
+        )}
         <SyncToast />
         <UpdateToast />
       </div>
+
+      {/* Global ⌘K / Ctrl+K command palette (additive overlay) */}
+      <CommandPalette />
+
+      {/* Dedicated sidebar/taskbar settings dialog (pencil button) */}
+      <SidebarSettingsDialog />
     </div>
+  )
+}
+
+// Content column: optional browser tab bar above the routed page. When tabs are
+// off this is identical to the previous `<main>` (a single overflow-hidden box).
+function MainArea({ tabsEnabled, scrim }: {
+  tabsEnabled: boolean; scrim: React.CSSProperties | undefined
+}) {
+  const splitTabIds = useTabsStore(s => s.splitTabIds)
+  const showSplit = tabsEnabled && splitTabIds.length > 0
+
+  return (
+    <main className="surface-content flex-1 flex flex-col overflow-hidden relative" style={scrim}>
+      {tabsEnabled && <TabBar />}
+      <div className="flex-1 flex min-h-0 overflow-hidden">
+        {/* Main pane = the app's hash router (sidebar/tab-bar driven). */}
+        <div className="flex-1 min-w-0 overflow-hidden relative">
+          <Outlet />
+        </div>
+        {/* Secondary split panes, each an independent in-memory router. */}
+        {showSplit && splitTabIds.map(id => <SplitPane key={id} tabId={id} />)}
+      </div>
+    </main>
   )
 }
 

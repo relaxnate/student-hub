@@ -18,6 +18,8 @@ import { Button } from '../../components/ui/Button'
 import { useAppStore } from '../../store/app.store'
 import { useSyncStore } from '../../store/sync.store'
 import { useDashboardData } from './useDashboardData'
+import { useCumulativeGpa } from './useCumulativeGpa'
+import DashboardViewSwitch from './DashboardViewSwitch'
 import type { Course, Assignment, Grade } from '@shared/types/entities'
 
 type Item = Assignment & { course?: Course; grade?: Grade }
@@ -78,6 +80,9 @@ export default function DashboardHome() {
   const setIsSyncing = useAppStore(s => s.setIsSyncing)
   const { progress, errors } = useSyncStore()
   const { courses, assignments, loading } = useDashboardData(isSyncing, false)
+  // GPA is cumulative — computed over ALL courses (current + history), not just
+  // the active courses shown below (BUG-011).
+  const gpa = useCumulativeGpa(isSyncing)
 
   const now = Date.now()
   const weekAhead = now + 7 * 86400_000
@@ -111,11 +116,7 @@ export default function DashboardHome() {
     return groups
   }, [week, now])
 
-  // Stats
-  const gradedCourses = courses.filter(c => c.currentScore != null)
-  const gpa = gradedCourses.length
-    ? gradedCourses.reduce((s, c) => s + Math.min(4, (c.currentScore! / 100) * 4), 0) / gradedCourses.length
-    : null
+  // Stats (GPA comes from useCumulativeGpa above — all courses, not just active).
   const dueThisWeek = today.length + week.length
   const missing = overdue.length
 
@@ -154,10 +155,13 @@ export default function DashboardHome() {
             <h1 className="t-display text-zinc-100">Dashboard</h1>
             <p className="t-caption text-zinc-500 mt-1">{format(now, 'EEEE, MMMM d')}</p>
           </div>
-          <Button variant="secondary" size="sm" icon={<RefreshCw size={13} className={syncing ? 'animate-spin' : ''} />}
-            loading={syncing} onClick={() => { setIsSyncing(true); api.sync.startAll() }}>
-            {syncing ? 'Syncing…' : 'Sync'}
-          </Button>
+          <div className="flex items-center gap-2">
+            <DashboardViewSwitch />
+            <Button variant="secondary" size="sm" icon={<RefreshCw size={13} className={syncing ? 'animate-spin' : ''} />}
+              loading={syncing} onClick={() => { setIsSyncing(true); api.sync.startAll() }}>
+              {syncing ? 'Syncing…' : 'Sync'}
+            </Button>
+          </div>
         </div>
 
         {/* Quick stats — unified row */}

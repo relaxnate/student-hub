@@ -10,7 +10,10 @@ import { registerObsidianHandlers, registerDownloadHandlers } from './obsidian.h
 import { registerGradeRescueHandlers } from './gradeRescue.handlers'
 import { registerExportHandlers } from './export.handlers'
 import { registerSimulationHandlers } from './simulation.handlers'
+import { registerReminderHandlers } from './reminders.handlers'
+import { registerWidgetHandlers } from './widgets.handlers'
 import { getDb } from '../database'
+import type { NotificationService } from '../services/notifications/NotificationService'
 import type { AppPreferences } from '@shared/types/ipc'
 
 const DEFAULT_PREFERENCES: AppPreferences = {
@@ -73,7 +76,7 @@ const DEFAULT_PREFERENCES: AppPreferences = {
   },
 }
 
-export function registerAllHandlers(oauthManager: OAuthManager): void {
+export function registerAllHandlers(oauthManager: OAuthManager, notifications: NotificationService): void {
   registerAuthHandlers(oauthManager)
   registerDataHandlers()
   registerSyncHandlers(oauthManager)
@@ -82,6 +85,8 @@ export function registerAllHandlers(oauthManager: OAuthManager): void {
   registerGradeRescueHandlers()
   registerExportHandlers()
   registerSimulationHandlers()
+  registerReminderHandlers(notifications)
+  registerWidgetHandlers()
 
   // ─── App / Window ─────────────────────────────────────────────────────
   ipcMain.handle(IPC.APP.GET_VERSION, () => ({ ok: true, data: app.getVersion() }))

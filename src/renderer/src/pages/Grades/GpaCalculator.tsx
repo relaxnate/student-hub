@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import { api } from '../../lib/ipc'
 import { cn, formatDueDate, percentToLetter } from '../../lib/utils'
+import { effectiveCoursePercent } from '../../lib/gpa'
 import { Badge, Skeleton, EmptyState, SectionHeader } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import type { Course, Assignment, Grade, AssignmentGroup } from '@shared/types/entities'
@@ -152,9 +153,13 @@ function computeCourse(
         weightTotal += group.groupWeight
       }
     }
-    const percent = weightTotal > 0
+    const recomputed = weightTotal > 0
       ? (weightedSum / weightTotal) * 100
       : (possible > 0 ? (earned / possible) * 100 : null)
+    // BUG-012: show the LMS-official grade by default; only use our local
+    // recompute when the student is running a what-if scenario (or the LMS
+    // reported no score). Keeps this matching the Grades tab + Dashboard GPA.
+    const percent = effectiveCoursePercent(course.currentScore, recomputed, hasOverride)
     return {
       percent,
       letter: percentToLetter(percent !== null ? Math.round(percent) : null),
@@ -163,7 +168,9 @@ function computeCourse(
     }
   }
 
-  const percent = possible > 0 ? (earned / possible) * 100 : null
+  const recomputed = possible > 0 ? (earned / possible) * 100 : null
+  // BUG-012: LMS-official first, recompute under what-if (or as fallback).
+  const percent = effectiveCoursePercent(course.currentScore, recomputed, hasOverride)
   return {
     percent,
     letter: percentToLetter(percent !== null ? Math.round(percent) : null),

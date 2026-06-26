@@ -18,6 +18,12 @@ import type {
   Quiz,
   Grade,
   CalendarEvent,
+  Reminder,
+  ReminderOccurrence,
+  CreateReminderInput,
+  WidgetLayout,
+  WidgetInstance,
+  UserWidgetAsset,
   SyncProgress,
   WhatIfScore,
   GetPageByUrlPayload,
@@ -208,6 +214,50 @@ const api = {
   calendar: {
     getRange: (payload: CalendarRangePayload): Promise<IPCResult<CalendarEvent[]>> =>
       ipcRenderer.invoke(IPC.CALENDAR.GET_RANGE, payload),
+  },
+
+  // ─── Reminders (local user-created) ───────────────────────────────────────
+  reminders: {
+    getRange: (payload: { startDate: string; endDate: string }): Promise<IPCResult<ReminderOccurrence[]>> =>
+      ipcRenderer.invoke(IPC.REMINDERS.GET_RANGE, payload),
+    getAll: (): Promise<IPCResult<Reminder[]>> =>
+      ipcRenderer.invoke(IPC.REMINDERS.GET_ALL),
+    create: (input: CreateReminderInput): Promise<IPCResult<Reminder>> =>
+      ipcRenderer.invoke(IPC.REMINDERS.CREATE, input),
+    update: (payload: CreateReminderInput & { id: string }): Promise<IPCResult<Reminder>> =>
+      ipcRenderer.invoke(IPC.REMINDERS.UPDATE, payload),
+    delete: (id: string): Promise<IPCResult<null>> =>
+      ipcRenderer.invoke(IPC.REMINDERS.DELETE, id),
+  },
+
+  // ─── Dashboard widgets ────────────────────────────────────────────────────
+  widgets: {
+    getLayout: (): Promise<IPCResult<WidgetLayout>> =>
+      ipcRenderer.invoke(IPC.WIDGETS.GET_LAYOUT),
+    saveLayout: (patch: { mode?: WidgetLayout['mode']; layoutJson?: string }): Promise<IPCResult<WidgetLayout>> =>
+      ipcRenderer.invoke(IPC.WIDGETS.SAVE_LAYOUT, patch),
+    getInstances: (): Promise<IPCResult<WidgetInstance[]>> =>
+      ipcRenderer.invoke(IPC.WIDGETS.GET_INSTANCES),
+    saveInstance: (instance: WidgetInstance): Promise<IPCResult<null>> =>
+      ipcRenderer.invoke(IPC.WIDGETS.SAVE_INSTANCE, instance),
+    removeInstance: (id: string): Promise<IPCResult<null>> =>
+      ipcRenderer.invoke(IPC.WIDGETS.REMOVE_INSTANCE, id),
+    uploadAsset: (): Promise<IPCResult<UserWidgetAsset | null>> =>
+      ipcRenderer.invoke(IPC.WIDGETS.UPLOAD_ASSET),
+    getAssets: (): Promise<IPCResult<UserWidgetAsset[]>> =>
+      ipcRenderer.invoke(IPC.WIDGETS.GET_ASSETS),
+    deleteAsset: (id: string): Promise<IPCResult<null>> =>
+      ipcRenderer.invoke(IPC.WIDGETS.DELETE_ASSET, id),
+  },
+
+  // ─── OS notification events ───────────────────────────────────────────────
+  notifications: {
+    // Fires when the user clicks an OS notification; payload routes the UI.
+    onNavigate: (cb: (payload: { route: string }) => void): (() => void) => {
+      const handler = (_: unknown, p: unknown) => cb(p as { route: string })
+      ipcRenderer.on(IPC.NOTIFICATIONS.NAVIGATE, handler)
+      return () => ipcRenderer.removeListener(IPC.NOTIFICATIONS.NAVIGATE, handler)
+    },
   },
 
   // ─── Files ──────────────────────────────────────────────────────────────

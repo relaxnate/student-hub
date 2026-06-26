@@ -7,7 +7,42 @@
  * application instantly with no React re-renders required.
  */
 
-import type { AppearanceSettings, BackgroundSettings, DashboardPanel } from '@shared/types/ipc'
+import type {
+  AppearanceSettings, BackgroundSettings, DashboardPanel,
+  SurfaceId, SurfaceStyle, SurfaceStyles,
+} from '@shared/types/ipc'
+
+// ─── Surfaces (per-component glass) ─────────────────────────────────────────────
+
+export const SURFACE_IDS: SurfaceId[] = ['sidebar', 'tabs', 'titlebar', 'content', 'card']
+
+export const SURFACE_LABELS: Record<SurfaceId, string> = {
+  sidebar:  'Sidebar / nav',
+  tabs:     'Tab bar',
+  titlebar: 'Title bar',
+  content:  'Content area',
+  card:     'Cards & panels',
+}
+
+// The built-in surface token each surface falls back to (so glass without a
+// custom colour still tints with the right base shade). `content` is transparent
+// by default so the page background shows through untinted.
+const SURFACE_BASE: Record<SurfaceId, string | null> = {
+  sidebar:  '--surface-950',
+  tabs:     '--surface-950',
+  titlebar: '--surface-950',
+  content:  null,
+  card:     '--surface-800',
+}
+
+const DEFAULT_SURFACE: SurfaceStyle = { mode: 'default', color: '', opacity: 80, blur: 16 }
+
+export function defaultSurfaces(): SurfaceStyles {
+  return SURFACE_IDS.reduce((acc, id) => {
+    acc[id] = { ...DEFAULT_SURFACE }
+    return acc
+  }, {} as SurfaceStyles)
+}
 
 // ─── Defaults ────────────────────────────────────────────────────────────────
 
@@ -30,6 +65,10 @@ export const DEFAULT_APPEARANCE: AppearanceSettings = {
   motionLevel:        'standard',
   disableAnimations:  false,
   sidebarMode:        'standard',
+  sidebarWidth:       null,
+  navType:            'standard',
+  tabsEnabled:        false,
+  surfaces:           defaultSurfaces(),
   density:            'balanced',
   effectsPreset:      'balanced',
   dashboardPanels: [
@@ -67,7 +106,18 @@ export function normalizeAppearance(partial?: Partial<AppearanceSettings> | null
     // Deep-merge dashboard panels: honour stored visibility/order but fill in
     // any new panel IDs that didn't exist when the prefs were saved.
     dashboardPanels:  mergePanels(partial?.dashboardPanels),
+    // Deep-merge surfaces so older saves (missing some surface IDs) backfill.
+    surfaces:         mergeSurfaces(partial?.surfaces),
   }
+}
+
+function mergeSurfaces(stored?: Partial<SurfaceStyles>): SurfaceStyles {
+  const defaults = defaultSurfaces()
+  if (!stored) return defaults
+  return SURFACE_IDS.reduce((acc, id) => {
+    acc[id] = { ...defaults[id], ...(stored[id] ?? {}) }
+    return acc
+  }, {} as SurfaceStyles)
 }
 
 function mergePanels(stored?: DashboardPanel[]): DashboardPanel[] {
@@ -297,7 +347,16 @@ export function applyAppearance(a: AppearanceSettings): void {
 
   // Layout
   root.dataset.sidebar = a.sidebarMode
+  root.dataset.nav      = a.navType
   root.dataset.density  = a.density
+  // Custom drag-resized width overrides the preset (inline style beats the
+  // [data-sidebar] attribute rule). Only the standard vertical sidebar resizes:
+  // rail/dock/palette use fixed widths, and compact is icon-only.
+  if (a.navType === 'standard' && a.sidebarMode !== 'compact' && a.sidebarWidth) {
+    root.style.setProperty('--sidebar-width', `${a.sidebarWidth}px`)
+  } else {
+    root.style.removeProperty('--sidebar-width')
+  }
 
   // Effects preset
   const fx = EFFECTS_MAP[a.effectsPreset] ?? EFFECTS_MAP.balanced
@@ -306,6 +365,48 @@ export function applyAppearance(a: AppearanceSettings): void {
   root.style.setProperty('--shadow-sm',      fx.shadowSm)
   root.style.setProperty('--glass-blur',     fx.glassBlur)
   root.style.setProperty('--glass-opacity',  fx.glassOpacity)
+
+  // Per-component surfaces (glass / translucency / per-surface colour)
+  applySurfaces(root, a.surfaces)
+}
+
+// ─── Per-component surfaces ─────────────────────────────────────────────────────
+// Writes `--surf-{id}-bg` / `--surf-{id}-filter` consumed by the `.surface-{id}`
+// classes in index.css. When a surface is left on 'default' the override vars are
+// removed and the class falls back to the built-in token.
+
+function applySurfaces(root: HTMLElement, surfaces: SurfaceStyles): void {
+  for (const id of SURFACE_IDS) {
+    const s = surfaces[id] ?? DEFAULT_SURFACE
+    const bgVar  = `--surf-${id}-bg`
+    const filVar = `--surf-${id}-filter`
+    const base   = SURFACE_BASE[id]
+    const rgb    = s.color ? toChannels(s.color) : null   // "r g b" or null
+    const alpha  = clamp(s.opacity, 0, 100) / 100
+
+    if (s.mode === 'default') {
+      root.style.removeProperty(bgVar)
+      root.style.removeProperty(filVar)
+      continue
+    }
+
+    if (s.mode === 'solid') {
+      // Opaque custom colour (falls back to default if no colour chosen).
+      if (rgb) root.style.setProperty(bgVar, `rgb(${rgb})`)
+      else     root.style.removeProperty(bgVar)
+      root.style.removeProperty(filVar)
+      continue
+    }
+
+    // glass — translucent tint (reveals the background) + backdrop blur.
+    const tint = rgb
+      ? `rgb(${rgb} / ${alpha})`
+      : base
+        ? `rgb(var(${base}) / ${alpha})`
+        : `rgb(255 255 255 / ${Math.min(alpha, 0.18)})`  // content has no base token
+    root.style.setProperty(bgVar, tint)
+    root.style.setProperty(filVar, `blur(${clamp(s.blur, 0, 40)}px)`)
+  }
 }
 
 // ─── Background helpers ───────────────────────────────────────────────────────
