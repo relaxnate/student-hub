@@ -388,6 +388,24 @@ body {
    This is the correct "data reads as data" treatment — NOT a monospace font. */
 .tnum { font-variant-numeric: tabular-nums slashed-zero; }
 
+/* Skeleton shimmer — a subtle left-to-right gradient sweep over a surface fill.
+   Replaces spinners where content has a known shape. Reduced-motion disables the
+   sweep via the global prefers-reduced-motion reset above. */
+.skeleton-shimmer {
+  position: relative;
+  overflow: hidden;
+  background: rgb(var(--surface-700));
+}
+.skeleton-shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.045), transparent);
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+@keyframes shimmer { 100% { transform: translateX(100%); } }
+
 /* ─── Focus rings (secondary-accent driven) ──────────────────────────────────── */
 :focus-visible {
   outline: 2px solid rgb(var(--accent2));

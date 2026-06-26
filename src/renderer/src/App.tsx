@@ -7,6 +7,7 @@ import { useSyncStore } from './store/sync.store'
 import { api } from './lib/ipc'
 import { applyAppearance, watchSystemTheme, framerReducedMotion, DEFAULT_APPEARANCE } from './lib/appearance'
 import { ColorblindFilters } from './components/ui/ColorblindFilters'
+import { TooltipProvider } from './components/ui/Tooltip'
 import { useWorkspaceStore } from './store/workspace.store'
 import type { SyncProgress } from '@shared/types/ipc'
 
@@ -62,9 +63,11 @@ export default function App() {
 
   return (
     <MotionConfig reducedMotion={framerReducedMotion(appearance)}>
-      <ColorblindFilters />
-      <AppBootstrap />
-      <RouterProvider router={router} />
+      <TooltipProvider delayDuration={400} skipDelayDuration={300}>
+        <ColorblindFilters />
+        <AppBootstrap />
+        <RouterProvider router={router} />
+      </TooltipProvider>
     </MotionConfig>
   )
 }
