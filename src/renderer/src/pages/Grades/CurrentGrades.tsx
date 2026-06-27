@@ -396,6 +396,7 @@ export default function CurrentGrades() {
   const active      = ws.active()
   const layout      = active.pagePrefs.gradesLayout
   const showHistory = useAppStore(s => s.preferences?.showHistoryCourses ?? false)
+  const isSyncing   = useAppStore(s => s.isSyncing)
 
   const [summaries, setSummaries] = useState<CourseSummary[]>([])
   const [loading,   setLoading]   = useState(true)
@@ -438,7 +439,7 @@ export default function CurrentGrades() {
       setLoading(false)
     }
     load()
-  }, [showHistory])
+  }, [showHistory, isSyncing])
 
   const displayed = useMemo(() => {
     const base = filterCourseId

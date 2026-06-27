@@ -2,6 +2,7 @@ import { BaseRepository } from './BaseRepository'
 import type { Assignment, Grade, RubricCriterion, SubmissionType } from '@shared/types/entities'
 import { logDebug } from '../../crash-logger'
 
+
 // ─── Assignment Repository ───────────────────────────────────────────────────
 
 interface AssignmentRow {
@@ -130,8 +131,26 @@ export class AssignmentRepository extends BaseRepository<Assignment, AssignmentR
     return rows.map(r => this.fromRow(r))
   }
 
-  save(assignment: Assignment): void              { this.upsert(assignment) }
-  saveMany(assignments: Assignment[]): void       { this.upsertMany(assignments) }
+  save(assignment: Assignment): void { this.upsert(assignment) }
+
+  /**
+   * Resilient bulk upsert — saves each assignment individually so a single
+   * FK violation (e.g. assignment_group_id referencing a group that failed
+   * to sync) never rolls back the entire course's assignment batch.
+   * Mirrors the same pattern used by GradeRepository.saveMany.
+   */
+  saveMany(assignments: Assignment[]): void {
+    for (const a of assignments) {
+      try {
+        this.upsert(a)
+      } catch (err) {
+        logDebug(
+          `[AssignmentRepository] skipped assignment ${a.id} (course ${a.courseId}): ` +
+          `${err instanceof Error ? err.message : String(err)}`
+        )
+      }
+    }
+  }
 }
 
 // ─── Grade Repository ────────────────────────────────────────────────────────

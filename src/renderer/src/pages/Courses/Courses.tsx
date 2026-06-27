@@ -183,6 +183,8 @@ export default function Courses() {
   const { coursesLayout: layout, coursesSortBy: sortBy } = active.pagePrefs
   const showHistory  = useAppStore(s => s.preferences?.showHistoryCourses ?? false)
 
+  const isSyncing = useAppStore(s => s.isSyncing)
+
   const [courses, setCourses] = useState<Course[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -192,7 +194,7 @@ export default function Courses() {
       if (r.ok) setCourses(r.data)
       setLoading(false)
     })
-  }, [showHistory])
+  }, [showHistory, isSyncing])
 
   const sorted = useMemo(() => {
     const copy = [...courses]

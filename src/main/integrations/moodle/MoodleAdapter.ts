@@ -1,6 +1,6 @@
 import { IntegrationAdapter } from '../base/IntegrationAdapter'
 import type { OAuthConfig, TokenResponse } from '../base/IntegrationAdapter'
-import { TokenExpiredError, APIError, NetworkError } from '../base/errors'
+import { TokenExpiredError, APIError } from '../base/errors'
 import type {
   Course, Module, ModuleItem, ModuleItemType, Assignment, AssignmentAttachment,
   AssignmentGroup, CourseFile, CoursePage, Quiz, Grade, CalendarEvent,
@@ -213,6 +213,8 @@ export class MoodleAdapter extends IntegrationAdapter {
   // POSTs to {baseUrl}/webservice/rest/server.php with wstoken (the access token)
   // + wsfunction + moodlewsrestformat=json. Moodle reports errors as HTTP 200 with
   // an `exception`/`errorcode` body, so we inspect the JSON, not just the status.
+  // Uses the base-class fetchWithRetry so transient network/5xx errors are
+  // automatically retried with exponential backoff (same resilience as Canvas).
   private async mdl<T>(wsfunction: string, params: Record<string, string> = {}): Promise<T> {
     if (!this.accessToken) throw new TokenExpiredError()
     const body = new URLSearchParams({
@@ -222,16 +224,13 @@ export class MoodleAdapter extends IntegrationAdapter {
       ...params,
     })
 
-    let response: Response
-    try {
-      response = await fetch(`${this.baseUrl}${WS_PATH}`, {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body:    body.toString(),
-      })
-    } catch (cause) {
-      throw new NetworkError(cause)
-    }
+    const response = await this.fetchWithRetry(`${this.baseUrl}${WS_PATH}`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body:    body.toString(),
+    })
+
+    if (response.status === 401) throw new TokenExpiredError()
     if (!response.ok) throw new APIError(response.status, await response.text().catch(() => ''))
 
     const data = await response.json() as unknown

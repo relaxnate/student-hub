@@ -266,6 +266,7 @@ export default function Assignments() {
   const ws           = useWorkspaceStore()
   const active       = ws.active()
   const showHistory  = useAppStore(s => s.preferences?.showHistoryCourses ?? false)
+  const isSyncing    = useAppStore(s => s.isSyncing)
   const { assignmentsLayout: layout, assignmentsSortBy: sortBy } = active.pagePrefs
 
   const [courses,     setCourses]     = useState<Course[]>([])
@@ -277,7 +278,7 @@ export default function Assignments() {
   useEffect(() => {
     const fetch = showHistory ? api.courses.getAllIncludingInactive : api.courses.getAll
     fetch().then((r: { ok: boolean; data: Course[] }) => { if (r.ok) setCourses(r.data) })
-  }, [showHistory])
+  }, [showHistory, isSyncing])
 
   useEffect(() => {
     setLoading(true)
@@ -301,7 +302,7 @@ export default function Assignments() {
       setAssignments(all); setLoading(false)
     }
     load()
-  }, [courseFilter, showHistory])
+  }, [courseFilter, showHistory, isSyncing])
 
   const sorted = useMemo(() => {
     let result = assignments.filter(a =>

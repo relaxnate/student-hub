@@ -129,8 +129,11 @@ export abstract class IntegrationAdapter {
    * Response for the caller to handle auth / ok / parsing; throws the
    * appropriate typed error once retries are exhausted. Non-transient responses
    * (4xx other than 429) return immediately so they aren't pointlessly retried.
+   *
+   * Protected so subclasses (e.g. MoodleAdapter) can use it for their own
+   * request formats without duplicating the retry/backoff logic.
    */
-  private async fetchWithRetry(
+  protected async fetchWithRetry(
     url: string,
     init: RequestInit,
     maxAttempts = 3

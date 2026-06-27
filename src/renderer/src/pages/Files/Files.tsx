@@ -54,14 +54,15 @@ export default function Files() {
   const [loading,  setLoading]  = useState(true)
 
   const showHistory = useAppStore(s => s.preferences?.showHistoryCourses ?? false)
+  const isSyncing   = useAppStore(s => s.isSyncing)
 
-  // Load courses once on mount
+  // Reload courses after each sync so freshly synced files appear
   useEffect(() => {
     const fetch = showHistory ? api.courses.getAllIncludingInactive : api.courses.getAll
     fetch().then((r: { ok: boolean; data: Course[] }) => {
       if (r.ok) setCourses(r.data)
     })
-  }, [showHistory])
+  }, [showHistory, isSyncing])
 
   // Re-fetch files whenever the course selection changes
   useEffect(() => {

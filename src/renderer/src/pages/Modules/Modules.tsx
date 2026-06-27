@@ -254,6 +254,7 @@ export default function Modules() {
   const active      = ws.active()
   const layout      = active.pagePrefs.modulesLayout
   const showHistory = useAppStore(s => s.preferences?.showHistoryCourses ?? false)
+  const isSyncing   = useAppStore(s => s.isSyncing)
 
   const [courses,  setCourses]  = useState<Course[]>([])
   const [selected, setSelected] = useState<string | null>(filterCourseId)
@@ -269,7 +270,7 @@ export default function Modules() {
         if (!selected && r.data.length > 0) setSelected(r.data[0].id)
       }
     })
-  }, [showHistory])
+  }, [showHistory, isSyncing])
 
   const loadModules = async (courseId: string) => {
     setLoading(true)
