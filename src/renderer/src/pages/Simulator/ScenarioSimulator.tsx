@@ -8,6 +8,7 @@ import { Plus, Trash2, Trophy, Crown } from 'lucide-react'
 import { api } from '../../lib/ipc'
 import { cn, percentToLetter } from '../../lib/utils'
 import { Badge } from '../../components/ui/Badge'
+import { CustomSelect } from '../../components/ui/CustomSelect'
 import type { SimulationScenario } from '@shared/types/entities'
 import {
   computeCoursePercent, computeOverallGpa, type CourseBundle,
@@ -182,14 +183,15 @@ export default function ScenarioSimulator({ bundles }: { bundles: CourseBundle[]
           <section>
             <div className="flex items-center justify-between mb-2">
               <h2 className="text-sm font-semibold text-zinc-300">Assignment editor</h2>
-              <select value={selectedCourseId} onChange={e => setSelectedCourseId(e.target.value)}
-                className="bg-surface-700 border border-white/10 rounded-md text-xs text-zinc-300 px-2 py-1.5 focus:outline-none max-w-[260px]">
-                {bundles.map(b => (
-                  <option key={b.course.id} value={b.course.id}>
-                    {b.course.name}{!b.course.isActive ? ' (past)' : ''}
-                  </option>
-                ))}
-              </select>
+              <CustomSelect
+                value={selectedCourseId ?? ''}
+                onChange={setSelectedCourseId}
+                options={bundles.map(b => ({
+                  value: b.course.id,
+                  label: b.course.name + (!b.course.isActive ? ' (past)' : ''),
+                }))}
+                className="w-64"
+              />
             </div>
 
             {selected && (

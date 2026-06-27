@@ -4,6 +4,7 @@ import http from 'node:http'
 import type { AddressInfo } from 'node:net'
 import { getDb } from '../../database'
 import { createAdapter, registerAdapter } from '../../integrations/registry'
+import { IcsCalendarAdapter } from '../../integrations/ics/IcsCalendarAdapter'
 import { TokenStore } from './TokenStore'
 import type { IntegrationProvider, Integration } from '@shared/types/entities'
 
@@ -306,6 +307,53 @@ export class OAuthManager {
       isActive:       true,
     }
   }
+  /**
+   * Connect a universal calendar feed (.ics) — the student pastes their personal
+   * feed URL (the user's "text box" idea). No OAuth, no admin, no cost; works for
+   * almost any LMS plus Google/Outlook. The feed URL is the credential, so we
+   * store it encrypted as the token AND as base_url (used to restore the adapter
+   * on launch). An optional label names the connected account.
+   */
+  async connectCalendarFeed(feedUrl: string, label?: string): Promise<Integration> {
+    const url = feedUrl.trim()
+    // Build the ICS adapter directly so we can pass the friendly label, then set
+    // the URL as the "token" so fetchUserProfile (which validates the feed) sees it.
+    const adapter = new IcsCalendarAdapter(url, label)
+    adapter.setTokens(url, null, null)
+
+    // Validates the feed: throws if the URL isn't reachable or isn't a calendar.
+    const profile = await adapter.fetchUserProfile()
+
+    const integrationId = `ics-calendar-${profile.id}`
+    const db = getDb()
+
+    db.prepare(`
+      INSERT INTO integrations
+        (id, provider, base_url, user_id_external, user_name, user_email, connected_at, is_active)
+      VALUES (?, 'ics-calendar', ?, ?, ?, ?, ?, 1)
+      ON CONFLICT(id) DO UPDATE SET
+        base_url   = excluded.base_url,
+        user_name  = excluded.user_name,
+        is_active  = 1
+    `).run(integrationId, url, profile.id, profile.name, profile.email, Date.now())
+
+    this.tokenStore.save(integrationId, { accessToken: url, refreshToken: null, expiresAt: null })
+    registerAdapter(integrationId, adapter)
+
+    return {
+      id:             integrationId,
+      provider:       'ics-calendar',
+      displayName:    `${adapter.displayName} — ${profile.name}`,
+      baseUrl:        url,
+      userIdExternal: profile.id,
+      userName:       profile.name,
+      userEmail:      profile.email,
+      connectedAt:    Date.now(),
+      lastSyncedAt:   null,
+      isActive:       true,
+    }
+  }
+
   async logout(integrationId: string): Promise<void> {
     this.tokenStore.clear(integrationId)
     const db = getDb()

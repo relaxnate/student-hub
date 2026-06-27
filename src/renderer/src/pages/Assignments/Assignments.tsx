@@ -8,6 +8,7 @@ import {
 import { api } from '../../lib/ipc'
 import { cn, formatDueDate, getDueUrgency } from '../../lib/utils'
 import { Badge, Skeleton, EmptyState } from '../../components/ui/Badge'
+import { CustomSelect } from '../../components/ui/CustomSelect'
 import { useWorkspaceStore } from '../../store/workspace.store'
 import { useAppStore } from '../../store/app.store'
 import type { Assignment, Course, Grade } from '@shared/types/entities'
@@ -352,20 +353,25 @@ export default function Assignments() {
             </div>
 
             {/* Course filter */}
-            <select value={courseFilter} onChange={e => setCourseFilter(e.target.value)}
-              className="bg-surface-700 border border-white/10 rounded-md text-xs text-zinc-300 px-2 py-1.5 focus:outline-none max-w-40">
-              <option value="all">All courses</option>
-              {courses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
+            <CustomSelect
+              value={courseFilter}
+              onChange={setCourseFilter}
+              options={[
+                { value: 'all', label: 'All courses' },
+                ...courses.map(c => ({ value: c.id, label: c.name })),
+              ]}
+              className="w-44"
+            />
 
             {/* Sort */}
             <div className="flex items-center gap-1.5">
               <SortAsc size={13} className="text-zinc-500" />
-              <select value={sortBy}
-                onChange={e => ws.updatePagePrefs({ assignmentsSortBy: e.target.value as AssignmentsSortBy })}
-                className="bg-surface-700 border border-white/10 rounded-md text-xs text-zinc-300 px-2 py-1.5 focus:outline-none">
-                {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-              </select>
+              <CustomSelect
+                value={sortBy}
+                onChange={v => ws.updatePagePrefs({ assignmentsSortBy: v as AssignmentsSortBy })}
+                options={SORT_OPTIONS}
+                className="w-40"
+              />
             </div>
 
             {/* Layout */}

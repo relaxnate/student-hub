@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, BookOpen, Layers, ClipboardList,
   BarChart2, Calendar, FolderOpen, Calculator, ShieldAlert,
-  Archive, FlaskConical,
+  Archive, FlaskConical, Sparkles,
 } from 'lucide-react'
 import type { NavItemId } from '@shared/types/ipc'
 import type { IntegrationProvider } from '@shared/types/entities'
@@ -14,6 +14,7 @@ export const NAV_ICONS: Record<NavItemId, React.ReactNode> = {
   'courses':          <BookOpen size={16} />,
   'modules':          <Layers size={16} />,
   'assignments':      <ClipboardList size={16} />,
+  'ai-helper':        <Sparkles size={16} />,
   'grades':           <BarChart2 size={16} />,
   'grade-calculator': <Calculator size={16} />,
   'grade-rescue':     <ShieldAlert size={16} />,
@@ -28,6 +29,7 @@ export const NAV_ROUTES: Record<NavItemId, string> = {
   'courses':          '/courses',
   'modules':          '/modules',
   'assignments':      '/assignments',
+  'ai-helper':        '/ai-helper',
   'grades':           '/grades',
   'grade-calculator': '/grade-calculator',
   'grade-rescue':     '/grade-rescue',
@@ -46,6 +48,7 @@ export const PROVIDER_META: Record<IntegrationProvider, { short: string; color: 
   'schoology':        { short: 'Schoology', color: '#1A8FE3' },
   'google-calendar':  { short: 'Calendar',  color: '#4285F4' },
   'outlook-calendar': { short: 'Outlook',   color: '#0078D4' },
+  'ics-calendar':     { short: 'Feed',      color: '#0EA5E9' },
 }
 
 // Cross-component event to open the ⌘K command palette from a button (used by
@@ -70,6 +73,7 @@ const ROUTE_TITLES: Record<string, string> = {
   '/courses':          'Courses',
   '/modules':          'Modules',
   '/assignments':      'Assignments',
+  '/ai-helper':        'AI Helper',
   '/grades':           'Grades',
   '/grade-calculator': 'GPA Calculator',
   '/grade-rescue':     'Grade Rescue',

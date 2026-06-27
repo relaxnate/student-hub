@@ -7,7 +7,7 @@ import type {
 } from '@shared/types/entities'
 import type {
   MSEduClass, MSEduAssignment, MSEduSubmission,
-  MSSubmissionOutcome, MSListResponse, MSUser,
+  MSListResponse, MSUser,
 } from './teams.types'
 
 const GRAPH_BASE   = 'https://graph.microsoft.com/v1.0'
@@ -207,7 +207,7 @@ export class MicrosoftTeamsAdapter extends IntegrationAdapter {
           : null
 
       const rubric: RubricCriterion[] | null = a.rubric
-        ? a.rubric.qualities.map((q, qi) => ({
+        ? a.rubric.qualities.map((q) => ({
             id:              q.qualityId,
             description:     q.displayName,
             longDescription: q.description?.content ?? null,
@@ -382,7 +382,7 @@ export class MicrosoftTeamsAdapter extends IntegrationAdapter {
     let nextLink: string | null = url
 
     while (nextLink) {
-      const page = await this.msRequest<MSListResponse<T>>(nextLink)
+      const page: MSListResponse<T> = await this.msRequest<MSListResponse<T>>(nextLink)
       results.push(...page.value)
       nextLink = page['@odata.nextLink'] ?? null
     }

@@ -9,6 +9,10 @@ export type IntegrationProvider =
   | 'schoology'
   | 'google-calendar'
   | 'outlook-calendar'
+  // Universal calendar-feed (.ics) subscription — works for almost every LMS
+  // (Canvas/Schoology/Blackboard/Brightspace) plus Google/Outlook calendars.
+  // Student pastes their personal feed URL; carries due dates + titles only.
+  | 'ics-calendar'
 
 export interface Integration {
   id: string
@@ -435,4 +439,136 @@ export interface SyncProgress {
   courseName: string | null
   itemsProcessed: number
   itemsTotal: number | null
+}
+
+// ─── AI Helper (subsystem, schema v7) ───────────────────────────────────────
+// Multi-provider AI gateway types. Provider API keys live ENCRYPTED in main only
+// (AIKeyService) and never appear in any of these renderer-facing entities.
+
+// 'studenthub' is the built-in, $0, fully-offline assistant — it calls no network
+// and is grounded in the user's own synced data + a curated academic knowledge base.
+export type AIProviderId = 'studenthub' | 'anthropic' | 'openai' | 'google' | 'openrouter' | 'groq' | 'free'
+
+export interface AIProvider {
+  id: AIProviderId
+  displayName: string
+  supportsVision: boolean
+  supportsTools: boolean
+  contextWindow: number
+  isConnected: boolean   // has a valid stored key (or is the keyless free tier)
+  isFree: boolean
+}
+
+export interface AIModel {
+  id: string
+  displayName: string
+  provider: string
+  contextWindow: number
+  supportsVision: boolean
+  supportsTools: boolean
+  isFree: boolean
+  inputCostPer1M: number | null
+  outputCostPer1M: number | null
+}
+
+export interface AIMessage {
+  id: string
+  conversationId: string
+  role: 'user' | 'assistant' | 'system'
+  content: string
+  toolCalls?: ToolCall[]
+  toolResults?: ToolResult[]
+  tokensUsed?: number
+  createdAt: number
+}
+
+export interface AIConversation {
+  id: string
+  title: string | null
+  provider: string
+  model: string
+  createdAt: number
+  updatedAt: number
+  messageCount: number
+  isArchived: boolean
+}
+
+export interface AIUsage {
+  provider: string
+  model: string
+  dateKey: string
+  tokensIn: number
+  tokensOut: number
+  requestCount: number
+  estimatedCost: number
+  updatedAt: number
+}
+
+export interface UsageFraction {
+  fraction: number          // 0..1 — drives the mascot mood + usage meter
+  label: string             // e.g. 'Free tier — 847 of 1000 daily requests'
+  provider: string
+  isAtLimit: boolean        // free tier: hard stop; BYOK: over self-set budget
+  resetsAt: string | null   // ISO instant the free-tier daily window resets
+}
+
+// ── Provider-agnostic chat wire types ──
+export interface ChatMessage {
+  role: 'user' | 'assistant' | 'system'
+  content: string | ContentPart[]
+}
+
+export interface ContentPart {
+  type: 'text' | 'image_url'
+  text?: string
+  image_url?: { url: string }
+}
+
+export interface ChatChunk {
+  delta: string
+  done: boolean
+  usage?: { inputTokens: number; outputTokens: number }
+  // Tool/function calls the model requested this turn — populated on the final
+  // (done) chunk once their streamed arguments are fully accumulated (Phase 2).
+  toolCalls?: ToolCall[]
+  error?: string
+}
+
+export interface ToolDefinition {
+  name: string
+  description: string
+  parameters: Record<string, unknown>
+}
+
+export interface ToolCall {
+  id: string
+  name: string
+  arguments: string
+}
+
+export interface ToolResult {
+  toolCallId: string
+  content: string
+}
+
+export interface ModelInfo {
+  id: string
+  displayName: string
+  contextWindow: number
+  supportsVision: boolean
+  supportsTools: boolean
+  isFree?: boolean
+  inputCostPer1M: number | null
+  outputCostPer1M: number | null
+}
+
+// A selectable mascot skin. `builtin` skins (e.g. the default SVG "Byte") need no
+// .riv file; `riv` points to a Rive asset when one is dropped into resources/mascot.
+export interface MascotSkin {
+  id: string
+  name: string
+  description: string
+  builtin: boolean
+  riv: string | null        // absolute path to a .riv, or null for the built-in SVG
+  thumbnail: string | null
 }

@@ -4,8 +4,15 @@
 
 export interface CanvasCourse {
   id: number
-  name: string
-  course_code: string
+  // Canvas omits name/course_code (and almost every other field) for courses the
+  // student can't currently see — e.g. when access_restricted_by_date is true the
+  // object is essentially just { id, access_restricted_by_date }. Typed optional
+  // so the normalizer is forced to handle the missing-name case.
+  name?: string | null
+  course_code?: string | null
+  // True when the course is hidden because the term/course access dates haven't
+  // opened yet (or have closed). Such courses carry no usable data → skip them.
+  access_restricted_by_date?: boolean
   workflow_state: 'unpublished' | 'available' | 'completed' | 'deleted'
   account_id: number
   start_at: string | null      // ISO 8601
@@ -39,6 +46,22 @@ export interface CanvasEnrollment {
   computed_final_score?: number | null
   computed_current_grade?: string | null
   computed_final_grade?: string | null
+  // ── Multiple Grading Periods (MGP) ──────────────────────────────────────
+  // K-12 districts almost always enable grading periods (quarters/semesters).
+  // When MGP is on, the student's Canvas gradebook DEFAULTS to the CURRENT
+  // grading period's grade, not the whole-course total — so to match what the
+  // student actually sees we must prefer these *period* scores when present.
+  // Populated only when the course request includes
+  // include[]=current_grading_period_scores.
+  current_grading_period_id?: number | null
+  current_grading_period_title?: string | null
+  current_period_computed_current_score?: number | null
+  current_period_computed_final_score?: number | null
+  current_period_computed_current_grade?: string | null
+  current_period_computed_final_grade?: string | null
+  // True when the course lets students view an all-grading-periods total. When
+  // false (common in K-12), the student can ONLY see the current period grade.
+  totals_for_all_grading_periods_option?: boolean
 }
 
 export interface CanvasTerm {

@@ -14,6 +14,7 @@ const PROVIDER_LABELS: Record<IntegrationProvider, string> = {
   'schoology':        'Schoology',
   'google-calendar':  'Google Calendar',
   'outlook-calendar': 'Outlook',
+  'ics-calendar':     'Calendar Feed',
 }
 
 const PHASE_LABELS: Record<string, string> = {

@@ -15,7 +15,78 @@
 // they reference is guaranteed to exist by then — regardless of whether the
 // install is brand new or upgrading from an older schema version.
 
-export const CURRENT_SCHEMA_VERSION = 6
+export const CURRENT_SCHEMA_VERSION = 8
+
+// AI Helper subsystem — provider keys, usage metering, conversations, messages,
+// and AI preferences (schema v7). Standalone const so the v7 migration in
+// ./index.ts can re-run the identical idempotent DDL on an existing database.
+// Provider API keys are stored ENCRYPTED (safeStorage, same mechanism as Canvas
+// tokens — see AIKeyService); the plaintext key is never written here.
+export const AI_TABLES_SQL = `
+-- ─── AI Provider Keys ──────────────────────────────────────────────────────────
+-- One row per BYOK provider the user has connected. 'encrypted_key' is a
+-- safeStorage-encrypted, base64-encoded API key (NEVER plaintext, NEVER sent to
+-- the renderer). The built-in free tier needs no row (it uses Student Hub's own
+-- funded key inside the adapter).
+CREATE TABLE IF NOT EXISTS ai_provider_keys (
+  provider         TEXT    PRIMARY KEY,
+  encrypted_key    TEXT    NOT NULL,
+  display_label    TEXT,
+  added_at         INTEGER NOT NULL,
+  validated_at     INTEGER,
+  is_valid         INTEGER NOT NULL DEFAULT 0
+);
+
+-- ─── AI Usage ──────────────────────────────────────────────────────────────────
+-- Per (provider, model, day) usage rollup. 'date_key' is a local 'YYYY-MM-DD'
+-- string; the free-tier daily request cap and the BYOK budget meter both read
+-- from here.
+CREATE TABLE IF NOT EXISTS ai_usage (
+  id               TEXT    PRIMARY KEY,
+  provider         TEXT    NOT NULL,
+  model            TEXT    NOT NULL,
+  date_key         TEXT    NOT NULL,
+  tokens_in        INTEGER NOT NULL DEFAULT 0,
+  tokens_out       INTEGER NOT NULL DEFAULT 0,
+  request_count    INTEGER NOT NULL DEFAULT 0,
+  estimated_cost   REAL    NOT NULL DEFAULT 0,
+  updated_at       INTEGER NOT NULL
+);
+
+-- ─── AI Conversations ──────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS ai_conversations (
+  id               TEXT    PRIMARY KEY,
+  title            TEXT,
+  provider         TEXT    NOT NULL,
+  model            TEXT    NOT NULL,
+  created_at       INTEGER NOT NULL,
+  updated_at       INTEGER NOT NULL,
+  message_count    INTEGER NOT NULL DEFAULT 0,
+  is_archived      INTEGER NOT NULL DEFAULT 0
+);
+
+-- ─── AI Messages ───────────────────────────────────────────────────────────────
+-- Indexed on conversation_id (see CREATE_INDEXES_SQL) for fast history loads.
+CREATE TABLE IF NOT EXISTS ai_messages (
+  id               TEXT    PRIMARY KEY,
+  conversation_id  TEXT    NOT NULL REFERENCES ai_conversations(id) ON DELETE CASCADE,
+  role             TEXT    NOT NULL CHECK(role IN ('user','assistant','system')),
+  content          TEXT    NOT NULL,
+  tool_calls       TEXT,
+  tool_results     TEXT,
+  tokens_used      INTEGER,
+  created_at       INTEGER NOT NULL
+);
+
+-- ─── AI Preferences ────────────────────────────────────────────────────────────
+-- Small KV store for AI Helper settings (active_provider, active_model,
+-- byok_monthly_token_budget, mascot_skin, mascot_enabled, chat_font_size, …).
+CREATE TABLE IF NOT EXISTS ai_preferences (
+  key              TEXT    PRIMARY KEY,
+  value            TEXT    NOT NULL,
+  updated_at       INTEGER NOT NULL
+);
+`
 
 // Dashboard widget system — dual-mode (grid/free) layouts, widget instances, and
 // user-uploaded image assets (schema v6). Standalone const so the v6 migration in
@@ -386,6 +457,7 @@ CREATE TABLE IF NOT EXISTS what_if_scores (
 ${SIMULATION_TABLES_SQL}
 ${REMINDER_TABLES_SQL}
 ${WIDGET_TABLES_SQL}
+${AI_TABLES_SQL}
 `
 
 // All indexes, run AFTER migrations (see ./index.ts initDb) so that every
@@ -430,4 +502,7 @@ CREATE INDEX IF NOT EXISTS idx_scheduled_notifications_reminder  ON scheduled_no
 CREATE INDEX IF NOT EXISTS idx_scheduled_notifications_scheduled ON scheduled_notifications(scheduled_at);
 
 CREATE INDEX IF NOT EXISTS idx_widget_instances_layout ON widget_instances(layout_id);
+
+CREATE INDEX IF NOT EXISTS idx_ai_messages_conversation ON ai_messages(conversation_id);
+CREATE INDEX IF NOT EXISTS idx_ai_usage_provider_date   ON ai_usage(provider, date_key);
 `

@@ -8,6 +8,7 @@ import {
 import { api } from '../../lib/ipc'
 import { cn, percentToLetter } from '../../lib/utils'
 import { Badge, Skeleton, EmptyState, SectionHeader } from '../../components/ui/Badge'
+import { CustomSelect } from '../../components/ui/CustomSelect'
 import { useWorkspaceStore } from '../../store/workspace.store'
 import { useAppStore } from '../../store/app.store'
 import type { Course, Assignment, Grade } from '@shared/types/entities'
@@ -497,10 +498,12 @@ export default function CurrentGrades() {
             {/* Sort */}
             <div className="flex items-center gap-1.5">
               <SortAsc size={13} className="text-zinc-500" />
-              <select value={sortBy} onChange={e => setSortBy(e.target.value as GradesSortBy)}
-                className="bg-surface-700 border border-white/10 rounded-md text-xs text-zinc-300 px-2 py-1.5 focus:outline-none">
-                {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-              </select>
+              <CustomSelect
+                value={sortBy}
+                onChange={v => setSortBy(v as GradesSortBy)}
+                options={SORT_OPTIONS}
+                className="w-40"
+              />
             </div>
 
             {/* Layout toggle */}

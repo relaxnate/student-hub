@@ -78,7 +78,7 @@ export function DockNav() {
           >
             <span className="shrink-0">{NAV_ICONS[item.id]}</span>
             <span className="truncate">{item.label}</span>
-            {item.id === 'simulator' && (
+            {(item.id === 'simulator' || item.id === 'ai-helper') && (
               <span className="shrink-0 px-1 py-px rounded-[4px] t-micro font-semibold bg-accent-500/15 text-accent-400">
                 PRO
               </span>

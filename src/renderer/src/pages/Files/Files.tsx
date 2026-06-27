@@ -8,6 +8,7 @@ import {
 import { api } from '../../lib/ipc'
 import { cn, formatFileSize } from '../../lib/utils'
 import { Skeleton, EmptyState, SectionHeader, Badge } from '../../components/ui/Badge'
+import { CustomSelect } from '../../components/ui/CustomSelect'
 import { useAppStore } from '../../store/app.store'
 import type { CourseFile, Course } from '@shared/types/entities'
 
@@ -141,16 +142,15 @@ export default function Files() {
       {/* Controls */}
       <div className="px-6 pb-3 flex items-center gap-3 shrink-0 border-b border-white/5 flex-wrap">
         {/* Course filter */}
-        <select
+        <CustomSelect
           value={selected}
-          onChange={e => setSelected(e.target.value)}
-          className="bg-surface-700 border border-white/10 rounded-md text-xs text-zinc-300 px-2.5 py-1.5 focus:outline-none focus:border-accent-500/60"
-        >
-          <option value="all">All courses</option>
-          {courses.map(c => (
-            <option key={c.id} value={c.id}>{c.name}</option>
-          ))}
-        </select>
+          onChange={setSelected}
+          options={[
+            { value: 'all', label: 'All courses' },
+            ...courses.map(c => ({ value: c.id, label: c.name })),
+          ]}
+          className="w-44"
+        />
 
         {/* Search */}
         <div className="relative ml-auto">

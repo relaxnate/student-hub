@@ -8,6 +8,7 @@ import {
 import { api } from '../../lib/ipc'
 import { cn } from '../../lib/utils'
 import { Skeleton, EmptyState } from '../../components/ui/Badge'
+import { CustomSelect } from '../../components/ui/CustomSelect'
 import { useWorkspaceStore } from '../../store/workspace.store'
 import { useAppStore } from '../../store/app.store'
 import type { Course } from '@shared/types/entities'
@@ -235,12 +236,12 @@ export default function Courses() {
             {/* Sort */}
             <div className="flex items-center gap-1.5">
               <SortAsc size={13} className="text-zinc-500" />
-              <select
+              <CustomSelect
                 value={sortBy}
-                onChange={e => ws.updatePagePrefs({ coursesSortBy: e.target.value as CoursesSortBy })}
-                className="bg-surface-700 border border-white/10 rounded-md text-xs text-zinc-300 px-2 py-1.5 focus:outline-none">
-                {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-              </select>
+                onChange={v => ws.updatePagePrefs({ coursesSortBy: v as CoursesSortBy })}
+                options={SORT_OPTIONS}
+                className="w-40"
+              />
             </div>
 
             {/* Layout toggle */}

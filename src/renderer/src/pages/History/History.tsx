@@ -8,6 +8,8 @@ import {
 import { api } from '../../lib/ipc'
 import { cn, percentToLetter } from '../../lib/utils'
 import { Skeleton } from '../../components/ui/Badge'
+import { CustomSelect } from '../../components/ui/CustomSelect'
+import { SearchableCombobox } from '../../components/ui/SearchableCombobox'
 import type { Course, Assignment, Grade } from '@shared/types/entities'
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
@@ -418,8 +420,6 @@ function ComparisonPanel({ semesters }: { semesters: SemesterSnapshot[] }) {
     )
   }
 
-  const select = 'bg-surface-700 border border-white/10 rounded-md text-xs text-zinc-300 px-2 py-1.5 focus:outline-none focus:border-accent-500/60'
-
   return (
     <div className="bg-surface-800 border border-white/5 rounded-xl p-5 space-y-4">
       <div className="flex items-center gap-2">
@@ -429,13 +429,19 @@ function ComparisonPanel({ semesters }: { semesters: SemesterSnapshot[] }) {
 
       {/* Selector row */}
       <div className="grid grid-cols-3 gap-3 items-center">
-        <select value={termA} onChange={e => setTermA(e.target.value)} className={select}>
-          {semesters.map(s => <option key={s.term} value={s.term}>{s.term}</option>)}
-        </select>
+        <SearchableCombobox
+          value={termA}
+          onChange={setTermA}
+          options={semesters.map(s => ({ value: s.term, label: s.term }))}
+          searchPlaceholder="Search term…"
+        />
         <div className="text-center text-xs text-zinc-600 font-medium">vs</div>
-        <select value={termB} onChange={e => setTermB(e.target.value)} className={select}>
-          {semesters.map(s => <option key={s.term} value={s.term}>{s.term}</option>)}
-        </select>
+        <SearchableCombobox
+          value={termB}
+          onChange={setTermB}
+          options={semesters.map(s => ({ value: s.term, label: s.term }))}
+          searchPlaceholder="Search term…"
+        />
       </div>
 
       {/* Metrics grid */}
@@ -490,11 +496,15 @@ function ExportButton({ sem }: { sem: SemesterSnapshot }) {
 
   return (
     <div className="flex items-center gap-2">
-      <select value={format} onChange={e => setFormat(e.target.value as 'md' | 'pdf')}
-        className="bg-surface-700 border border-white/10 rounded-md text-xs text-zinc-300 px-2 py-1.5 focus:outline-none">
-        <option value="md">Markdown (.md)</option>
-        <option value="pdf">PDF (.pdf)</option>
-      </select>
+      <CustomSelect
+        value={format}
+        onChange={v => setFormat(v as 'md' | 'pdf')}
+        options={[
+          { value: 'md',  label: 'Markdown (.md)' },
+          { value: 'pdf', label: 'PDF (.pdf)' },
+        ]}
+        className="w-36"
+      />
       <button onClick={doExport} disabled={exporting}
         className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-accent-500/15 border border-accent-500/30 text-accent-400 text-xs font-medium hover:bg-accent-500/25 transition-colors disabled:opacity-60 disabled:cursor-not-allowed">
         {exporting ? <Loader2 size={12} className="animate-spin" /> : <FileText size={12} />}

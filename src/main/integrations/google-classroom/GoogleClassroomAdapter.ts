@@ -7,7 +7,7 @@ import type {
 } from '@shared/types/entities'
 import type {
   GCourse, GTopic, GCourseWork, GStudentSubmission,
-  GMaterial, GDate, GTimeOfDay, GUserProfile,
+  GDate, GTimeOfDay,
 } from './google-classroom.types'
 
 const GC_BASE      = 'https://classroom.googleapis.com/v1'
@@ -15,13 +15,17 @@ const TOKEN_URL    = 'https://oauth2.googleapis.com/token'
 const AUTH_URL     = 'https://accounts.google.com/o/oauth2/v2/auth'
 const REDIRECT_URI = 'student-hub://oauth/google-classroom/callback'
 
+// Minimal read-only scope set that powers the student experience (identity +
+// courses + the student's own coursework, submissions/grades, and topics for
+// modules). We deliberately DON'T request rosters/announcements — fewer
+// sensitive scopes means lighter Google verification and a shorter consent
+// screen for students. All are read-only ".me"/"readonly" scopes.
 const SCOPES = [
   'openid', 'profile', 'email',
   'https://www.googleapis.com/auth/classroom.courses.readonly',
   'https://www.googleapis.com/auth/classroom.coursework.me.readonly',
   'https://www.googleapis.com/auth/classroom.student-submissions.me.readonly',
-  'https://www.googleapis.com/auth/classroom.rosters.readonly',
-  'https://www.googleapis.com/auth/classroom.announcements.readonly',
+  'https://www.googleapis.com/auth/classroom.topics.readonly',
 ].join(' ')
 
 export class GoogleClassroomAdapter extends IntegrationAdapter {
@@ -101,13 +105,18 @@ export class GoogleClassroomAdapter extends IntegrationAdapter {
   }
 
   async fetchUserProfile() {
-    const data = await this.gcRequest<GUserProfile>(
+    // The OpenID Connect userinfo endpoint returns the FLAT OIDC shape
+    // ({ sub, name, email }) — NOT Classroom's userProfiles shape — so map those
+    // fields. `sub` is the stable Google account id used to namespace the
+    // integration. (Reading data.name.fullName/emailAddress here was wrong and
+    // produced an integration id of "google-classroom-undefined".)
+    const data = await this.gcRequest<{ sub: string; name?: string; email?: string }>(
       'https://www.googleapis.com/oauth2/v3/userinfo'
     )
     return {
-      id:    data.id,
-      name:  data.name.fullName,
-      email: data.emailAddress ?? null,
+      id:    data.sub,
+      name:  data.name ?? data.email ?? 'Google account',
+      email: data.email ?? null,
     }
   }
 
@@ -341,7 +350,7 @@ export class GoogleClassroomAdapter extends IntegrationAdapter {
   }
 
   async fetchCalendarEvents(
-    integrationId: string, _courseId: string | null, _externalCourseId: string | null
+    _integrationId: string, _courseId: string | null, _externalCourseId: string | null
   ): Promise<CalendarEvent[]> {
     // Classroom events are surfaced through the course-specific Google Calendar (calendarId)
     // which requires the calendar scope. For now, return empty — Calendar integration

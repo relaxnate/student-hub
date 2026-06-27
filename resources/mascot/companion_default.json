@@ -1,0 +1,6 @@
+{
+  "name": "Byte (default)",
+  "description": "The built-in blue gel companion. Rendered as an offline SVG — no .riv needed. Drop a companion_<name>.riv + companion_<name>.json here to add a Rive skin.",
+  "thumbnail": null,
+  "stateMachine": "Companion"
+}

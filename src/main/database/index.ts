@@ -2,7 +2,7 @@ import Database from 'better-sqlite3'
 import { app } from 'electron'
 import path from 'path'
 import fs from 'fs'
-import { CREATE_TABLES_SQL, CREATE_INDEXES_SQL, CURRENT_SCHEMA_VERSION, SIMULATION_TABLES_SQL, REMINDER_TABLES_SQL, WIDGET_TABLES_SQL } from './schema'
+import { CREATE_TABLES_SQL, CREATE_INDEXES_SQL, CURRENT_SCHEMA_VERSION, SIMULATION_TABLES_SQL, REMINDER_TABLES_SQL, WIDGET_TABLES_SQL, AI_TABLES_SQL } from './schema'
 
 let _db: Database.Database | null = null
 
@@ -123,6 +123,23 @@ const MIGRATIONS: Record<number, MigrationFn> = {
   // CREATE_INDEXES_SQL after migrations.
   6: (db) => {
     db.exec(WIDGET_TABLES_SQL)
+  },
+  // v7: AI Helper subsystem. Five new tables (ai_provider_keys, ai_usage,
+  // ai_conversations, ai_messages, ai_preferences) — no column changes to
+  // existing tables. Idempotent IF NOT EXISTS DDL re-run for upgrading
+  // databases; indexes added by CREATE_INDEXES_SQL after migrations.
+  7: (db) => {
+    db.exec(AI_TABLES_SQL)
+  },
+  // v8: AI Helper chat management — adds an archive flag to conversations so users
+  // can archive chats for later (vs. delete). New column on an existing table, so
+  // an explicit ALTER for upgrading databases (CREATE_TABLES_SQL already includes
+  // it for fresh installs). Guarded so re-runs don't fail if the column exists.
+  8: (db) => {
+    const cols = db.prepare(`PRAGMA table_info(ai_conversations)`).all() as { name: string }[]
+    if (!cols.some(c => c.name === 'is_archived')) {
+      db.exec(`ALTER TABLE ai_conversations ADD COLUMN is_archived INTEGER NOT NULL DEFAULT 0`)
+    }
   },
 }
 

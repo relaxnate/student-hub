@@ -1,5 +1,5 @@
 import React from 'react'
-import { Check, ChevronDown } from 'lucide-react'
+import { Check } from 'lucide-react'
 import { cn } from '../../lib/utils'
 
 // ─── Phase-1 design-system form controls ──────────────────────────────────────
@@ -76,40 +76,6 @@ export function Checkbox({ checked, onChange, disabled, id, ...aria }: CheckboxP
     </button>
   )
 }
-
-// ─── Select ───────────────────────────────────────────────────────────────────
-// Styled wrapper over a native <select> (keyboard-accessible, no portal/overlay
-// complexity, renders the OS option list correctly in Electron's Chromium). The
-// trigger visually matches Input; a chevron affordance is overlaid.
-interface SelectOption { value: string | number; label: string }
-interface SelectProps extends Omit<React.SelectHTMLAttributes<HTMLSelectElement>, 'children'> {
-  options?: SelectOption[]
-  compact?: boolean
-  children?: React.ReactNode
-}
-
-export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(function Select(
-  { options, compact, className, children, ...props }, ref
-) {
-  return (
-    <div className="relative inline-flex w-full">
-      <select
-        ref={ref}
-        className={cn(
-          'w-full appearance-none rounded-md bg-surface-700 text-[13px] text-zinc-100 cursor-pointer',
-          'border border-white/[0.10] focus:border-accent-500 focus:outline-none transition-colors duration-100',
-          compact ? 'h-7' : 'h-8',
-          'pl-3 pr-8',
-          className
-        )}
-        {...props}
-      >
-        {options ? options.map(o => <option key={o.value} value={o.value}>{o.label}</option>) : children}
-      </select>
-      <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" />
-    </div>
-  )
-})
 
 // ─── Progress bar ─────────────────────────────────────────────────────────────
 // 4px track. Semantic tones map to status colors; default is accent.

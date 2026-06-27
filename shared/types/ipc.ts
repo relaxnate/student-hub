@@ -23,6 +23,21 @@ import type {
   WhatIfScore,
   SimulationScenario,
   SimulationScore,
+  AIProvider,
+  AIProviderId,
+  AIModel,
+  AIMessage,
+  AIConversation,
+  AIUsage,
+  UsageFraction,
+  ChatMessage,
+  ContentPart,
+  ChatChunk,
+  ToolDefinition,
+  ToolCall,
+  ToolResult,
+  ModelInfo,
+  MascotSkin,
 } from './entities'
 
 // ─── Auth ───────────────────────────────────────────────────────────────────
@@ -36,6 +51,11 @@ export interface ConnectWithTokenPayload {
   provider: IntegrationProvider
   baseUrl:  string       // institution URL for Canvas/Moodle
   token:    string       // Personal Access Token
+}
+
+export interface ConnectCalendarFeedPayload {
+  feedUrl: string        // the student's personal .ics/webcal feed URL
+  label?:  string        // optional friendly name for the connected account
 }
 
 export type StartOAuthResult =
@@ -337,7 +357,151 @@ export type {
   WhatIfScore,
   SimulationScenario,
   SimulationScore,
+  AIProvider,
+  AIProviderId,
+  AIModel,
+  AIMessage,
+  AIConversation,
+  AIUsage,
+  UsageFraction,
+  ChatMessage,
+  ContentPart,
+  ChatChunk,
+  ToolDefinition,
+  ToolCall,
+  ToolResult,
+  ModelInfo,
+  MascotSkin,
 }
+
+// ─── AI Helper IPC payloads / streaming events ──────────────────────────────
+// Streaming uses START_STREAM (invoke, returns an ack) + main→renderer events
+// keyed by streamId so multiple concurrent streams never mix.
+
+export interface StreamParams {
+  streamId:        string
+  provider:        string
+  model:           string
+  messages:        ChatMessage[]
+  conversationId?: string        // append to an existing conversation, else a new one is created
+  tools?:          ToolDefinition[]
+  systemPrompt?:   string
+  maxTokens?:      number
+  temperature?:    number
+}
+
+export interface StreamChunkEvent {
+  streamId: string
+  delta:    string
+}
+
+export interface StreamDoneEvent {
+  streamId:       string
+  conversationId: string
+  messageId:      string
+  content:        string
+  usage?:         { inputTokens: number; outputTokens: number }
+}
+
+export interface StreamErrorEvent {
+  streamId: string
+  error:    string
+  code?:    'free_tier_limit' | 'rate_limit' | 'no_key' | 'vision_unsupported' | 'network' | 'unknown'
+}
+
+// A proposed (not-yet-applied) file edit from the propose_file_edit tool.
+export interface ProposedFileEdit {
+  filePath:        string   // validated absolute path
+  proposedContent: string
+  reason:          string
+}
+
+// Tool activity surfaced to the chat UI. status 'running' = a read-only tool is
+// executing; 'proposed' = a destructive edit awaiting the student's Apply.
+export interface ToolCallEvent {
+  streamId: string
+  id:       string
+  name:     string
+  status:   'running' | 'proposed'
+  proposal?: ProposedFileEdit
+}
+
+export interface ToolResultEvent {
+  streamId: string
+  id:       string
+  name:     string
+  content:  string   // short result preview for the card
+}
+
+export interface SaveKeyPayload     { provider: string; key: string }
+export interface ValidateKeyPayload { provider: string; key: string }
+export interface SetAIPreferencePayload { key: string; value: string }
+export interface ApplyFileEditPayload { filePath: string; proposedContent: string }
+
+// ─── PDF intelligence (Phase 4 — experimental) ──────────────────────────────
+export type PDFKind = 'fillable' | 'flat' | 'unknown'
+
+export interface PDFFieldAnswer {
+  name:     string   // AcroForm field name
+  question: string   // best-known label/prompt for the field
+  answer:   string   // AI-generated answer
+  type:     string   // text | checkbox | radio | dropdown
+}
+
+// One stamped answer on a flat/scanned PDF, in PDF user space (origin bottom-left,
+// y-up — the same space pdf-lib draws in). `y` is the text baseline.
+export interface PDFPlacement {
+  page:      number    // 0-based
+  x:         number    // points from the left edge
+  y:         number    // points from the bottom edge (baseline)
+  text:      string
+  size:      number    // target font size in points (main shrinks to fit maxWidth)
+  maxWidth?: number    // if set, the answer is shrunk/truncated to fit this width
+}
+
+// A proposed, NOT-yet-written PDF fill. Rendered as an action card; only
+// pdf:confirm-apply / pdf:stamp writes (to outputPath — never the original).
+export interface PDFProposal {
+  filePath:    string          // original (read-only)
+  outputPath:  string          // where the filled copy will be written
+  fileName:    string
+  kind:        PDFKind
+  fieldCount:  number
+  answers:     PDFFieldAnswer[]
+  experimental: true
+  note?:       string          // e.g. why flat/vision is unavailable
+  // Flat/scanned positional path (computed in the renderer from the PDF text
+  // layer, or via a vision model for scanned pages):
+  placements?: PDFPlacement[]
+  previews?:   string[]         // per-page PNG data-URLs with answer overlays drawn on
+  detection?:  'textlayer' | 'vision' | 'mixed'
+  mode?:       'autofill' | 'help'
+}
+
+export interface PDFAnalyzePayload { mode: 'autofill' | 'help' }
+export interface PDFConfirmPayload { proposal: PDFProposal }
+
+// Pick a PDF (main shows the dialog), detect its kind, and return the raw bytes
+// (base64) so the renderer can analyse the text layer / render previews.
+export interface PDFPickResult {
+  filePath:   string
+  fileName:   string
+  kind:       PDFKind
+  base64:     string          // raw PDF bytes for renderer-side pdfjs
+  outputPath: string          // suggested managed-files output path
+}
+
+// Renderer → main: answer a batch of extracted questions with the active AI
+// provider. Returns answers aligned by index to `questions`.
+export interface PDFAnswerPayload { questions: string[]; courseContext?: string }
+
+// Renderer → main: answer a scanned page from its rendered image (vision model),
+// returning answers + normalized 0..1000 anchor coords for placement.
+export interface PDFVisionPayload { imageDataUrl: string; courseContext?: string }
+export interface PDFVisionAnchor { question: string; answer: string; x: number; y: number }
+
+// Renderer → main: stamp computed placements onto a flat PDF → new file.
+export interface PDFStampPayload { filePath: string; outputPath: string; placements: PDFPlacement[] }
 
 // Appearance types are exported at their declaration site above.
 
@@ -358,7 +522,7 @@ export interface WidgetConfig {
 }
 
 export type NavItemId
-  = 'dashboard' | 'courses' | 'modules' | 'assignments' | 'grades'
+  = 'dashboard' | 'courses' | 'modules' | 'assignments' | 'ai-helper' | 'grades'
   | 'grade-calculator' | 'grade-rescue' | 'simulator' | 'calendar' | 'files' | 'history'
 
 export interface SidebarItemConfig {

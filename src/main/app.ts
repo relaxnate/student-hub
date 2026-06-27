@@ -145,16 +145,23 @@ function restoreAdapters(): void {
     const tokenStore = new TokenStore()
 
     for (const row of rows) {
-      const stored   = tokenStore.load(row.id)
+      const stored = tokenStore.load(row.id)
       if (!stored) continue
-      const clientId = getClientIdForProvider(row.provider)
-      if (!clientId) continue
+      // Token-based providers (Canvas PAT, Moodle) need NO clientId at all; OAuth
+      // providers use one only to REFRESH an expired token. So a missing clientId
+      // must never block restoring an integration whose stored access token still
+      // works. This previously did `if (!clientId) continue`, which skipped
+      // Canvas/Moodle on EVERY launch — their `*_CLIENT_ID` env var isn't present
+      // in packaged builds — so the encrypted tokens persisted but the live adapter
+      // never came back, and the next sync said "reconnect". That's exactly why
+      // users had to re-sign-in after every update instead of just re-syncing. (BUG-016)
+      const clientId = getClientIdForProvider(row.provider) ?? ''
 
       try {
         const adapter = createAdapter(row.provider, row.base_url ?? '', clientId)
         adapter.setTokens(stored.accessToken, stored.refreshToken, stored.expiresAt)
         registerAdapter(row.id, adapter)
-        console.log(`[Startup] Restored adapter: ${row.id}`)
+        console.log(`[Startup] Restored adapter: ${row.id} (${row.provider})`)
       } catch (err) {
         console.error(`[Startup] Failed to restore adapter ${row.id}:`, err)
       }

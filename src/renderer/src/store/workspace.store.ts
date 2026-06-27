@@ -21,13 +21,14 @@ export const DEFAULT_SIDEBAR_ITEMS: SidebarItemConfig[] = [
   { id: 'courses',          label: 'Courses',           visible: true,  order: 1, sectionId: null },
   { id: 'modules',          label: 'Modules',           visible: true,  order: 2, sectionId: null },
   { id: 'assignments',      label: 'Assignments',       visible: true,  order: 3, sectionId: null },
-  { id: 'grades',           label: 'Grades',            visible: true,  order: 4, sectionId: null },
-  { id: 'grade-calculator', label: 'Grade & GPA Calc.', visible: true,  order: 5, sectionId: null },
-  { id: 'grade-rescue',     label: 'Grade Rescue',      visible: true,  order: 6, sectionId: null },
-  { id: 'simulator',        label: 'Simulator',         visible: true,  order: 7, sectionId: null },
-  { id: 'calendar',         label: 'Calendar',          visible: true,  order: 8, sectionId: null },
-  { id: 'files',            label: 'Files',             visible: true,  order: 9, sectionId: null },
-  { id: 'history',         label: 'History',           visible: true,  order: 10, sectionId: null },
+  { id: 'ai-helper',        label: 'AI Helper',         visible: true,  order: 4, sectionId: null },
+  { id: 'grades',           label: 'Grades',            visible: true,  order: 5, sectionId: null },
+  { id: 'grade-calculator', label: 'Grade & GPA Calc.', visible: true,  order: 6, sectionId: null },
+  { id: 'grade-rescue',     label: 'Grade Rescue',      visible: true,  order: 7, sectionId: null },
+  { id: 'simulator',        label: 'Simulator',         visible: true,  order: 8, sectionId: null },
+  { id: 'calendar',         label: 'Calendar',          visible: true,  order: 9, sectionId: null },
+  { id: 'files',            label: 'Files',             visible: true,  order: 10, sectionId: null },
+  { id: 'history',         label: 'History',           visible: true,  order: 11, sectionId: null },
 ]
 
 export const DEFAULT_WIDGETS: WidgetConfig[] = [

@@ -1,7 +1,7 @@
 import * as Dialog from '@radix-ui/react-dialog'
 import { X, Settings2 } from 'lucide-react'
 import { cn } from '../lib/utils'
-import { Select } from '../components/ui/Controls'
+import { CustomSelect } from '../components/ui/CustomSelect'
 import { getWidgetDef } from './registry'
 import type { WidgetConfig } from './types'
 import type { WidgetInstance } from '@shared/types/entities'
@@ -64,12 +64,11 @@ export default function WidgetConfigPanel({
                 return (
                   <div key={field.key}>
                     <label className={labelCls}>{field.label}</label>
-                    <Select
+                    <CustomSelect
                       value={String(value ?? field.options?.[0]?.value ?? '')}
-                      onChange={e => onChangeConfig({ [field.key]: coerce(e.target.value) })}
-                    >
-                      {field.options?.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                    </Select>
+                      onChange={v => onChangeConfig({ [field.key]: coerce(v) })}
+                      options={(field.options ?? []).map(o => ({ value: String(o.value), label: o.label }))}
+                    />
                   </div>
                 )
               }

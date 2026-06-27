@@ -35,6 +35,27 @@ import type {
   CreateScenarioPayload,
   RenameScenarioPayload,
   SetSimulationScorePayload,
+  AIProvider,
+  AIConversation,
+  AIMessage,
+  AIUsage,
+  UsageFraction,
+  ModelInfo,
+  StreamParams,
+  StreamChunkEvent,
+  StreamDoneEvent,
+  StreamErrorEvent,
+  ToolCallEvent,
+  ToolResultEvent,
+  ApplyFileEditPayload,
+  MascotSkin,
+  PDFProposal,
+  PDFConfirmPayload,
+  PDFPickResult,
+  PDFAnswerPayload,
+  PDFVisionPayload,
+  PDFVisionAnchor,
+  PDFStampPayload,
 } from '@shared/types/ipc'
 
 // ─── The API surface exposed to the renderer ──────────────────────────────────
@@ -51,6 +72,13 @@ const api = {
       token:    string
     }): Promise<IPCResult<Integration>> =>
       ipcRenderer.invoke(IPC.AUTH.CONNECT_WITH_TOKEN, payload),
+
+    // Calendar feed (.ics) — universal "paste your feed URL" connect
+    connectCalendarFeed: (payload: {
+      feedUrl: string
+      label?:  string
+    }): Promise<IPCResult<Integration>> =>
+      ipcRenderer.invoke(IPC.AUTH.CONNECT_CALENDAR_FEED, payload),
 
     // OAuth — for Google Classroom / Teams (requires app registration)
     startOAuth: (payload: StartOAuthPayload): Promise<IPCResult<Integration>> =>
@@ -302,6 +330,121 @@ const api = {
 
     chooseVaultPath: (): Promise<IPCResult<string | null>> =>
       ipcRenderer.invoke(IPC.OBSIDIAN.CHOOSE_VAULT_PATH),
+  },
+
+  // ─── AI Helper ────────────────────────────────────────────────────────────
+  ai: {
+    getProviders: (): Promise<IPCResult<AIProvider[]>> =>
+      ipcRenderer.invoke(IPC.AI.GET_PROVIDERS),
+
+    getModels: (provider: string): Promise<IPCResult<ModelInfo[]>> =>
+      ipcRenderer.invoke(IPC.AI.GET_MODELS, provider),
+
+    saveKey: (provider: string, key: string): Promise<IPCResult<null>> =>
+      ipcRenderer.invoke(IPC.AI.SAVE_KEY, { provider, key }),
+
+    deleteKey: (provider: string): Promise<IPCResult<null>> =>
+      ipcRenderer.invoke(IPC.AI.DELETE_KEY, provider),
+
+    validateKey: (provider: string, key: string): Promise<IPCResult<{ ok: boolean; error?: string }>> =>
+      ipcRenderer.invoke(IPC.AI.VALIDATE_KEY, { provider, key }),
+
+    startStream: (params: StreamParams): Promise<IPCResult<null>> =>
+      ipcRenderer.invoke(IPC.AI.START_STREAM, params),
+
+    cancelStream: (streamId: string): Promise<IPCResult<null>> =>
+      ipcRenderer.invoke(IPC.AI.CANCEL_STREAM, streamId),
+
+    // Apply a proposed file edit (re-validated in main before writing).
+    applyFileEdit: (payload: ApplyFileEditPayload): Promise<IPCResult<{ path: string }>> =>
+      ipcRenderer.invoke(IPC.AI.APPLY_FILE_EDIT, payload),
+
+    // Streaming event subscriptions — each returns an unsubscribe function.
+    onStreamChunk: (cb: (data: StreamChunkEvent) => void): (() => void) => {
+      const handler = (_: unknown, d: StreamChunkEvent) => cb(d)
+      ipcRenderer.on(IPC.AI.STREAM_CHUNK, handler)
+      return () => ipcRenderer.removeListener(IPC.AI.STREAM_CHUNK, handler)
+    },
+    onStreamDone: (cb: (data: StreamDoneEvent) => void): (() => void) => {
+      const handler = (_: unknown, d: StreamDoneEvent) => cb(d)
+      ipcRenderer.on(IPC.AI.STREAM_DONE, handler)
+      return () => ipcRenderer.removeListener(IPC.AI.STREAM_DONE, handler)
+    },
+    onStreamError: (cb: (data: StreamErrorEvent) => void): (() => void) => {
+      const handler = (_: unknown, d: StreamErrorEvent) => cb(d)
+      ipcRenderer.on(IPC.AI.STREAM_ERROR, handler)
+      return () => ipcRenderer.removeListener(IPC.AI.STREAM_ERROR, handler)
+    },
+    onToolCall: (cb: (data: ToolCallEvent) => void): (() => void) => {
+      const handler = (_: unknown, d: ToolCallEvent) => cb(d)
+      ipcRenderer.on(IPC.AI.STREAM_TOOL_CALL, handler)
+      return () => ipcRenderer.removeListener(IPC.AI.STREAM_TOOL_CALL, handler)
+    },
+    onToolResult: (cb: (data: ToolResultEvent) => void): (() => void) => {
+      const handler = (_: unknown, d: ToolResultEvent) => cb(d)
+      ipcRenderer.on(IPC.AI.STREAM_TOOL_RESULT, handler)
+      return () => ipcRenderer.removeListener(IPC.AI.STREAM_TOOL_RESULT, handler)
+    },
+    removeStreamListeners: (): void => {
+      ipcRenderer.removeAllListeners(IPC.AI.STREAM_CHUNK)
+      ipcRenderer.removeAllListeners(IPC.AI.STREAM_DONE)
+      ipcRenderer.removeAllListeners(IPC.AI.STREAM_ERROR)
+      ipcRenderer.removeAllListeners(IPC.AI.STREAM_TOOL_CALL)
+      ipcRenderer.removeAllListeners(IPC.AI.STREAM_TOOL_RESULT)
+    },
+
+    getConversations: (): Promise<IPCResult<AIConversation[]>> =>
+      ipcRenderer.invoke(IPC.AI.GET_CONVERSATIONS),
+
+    getConversation: (id: string): Promise<IPCResult<AIConversation>> =>
+      ipcRenderer.invoke(IPC.AI.GET_CONVERSATION, id),
+
+    getMessages: (conversationId: string): Promise<IPCResult<AIMessage[]>> =>
+      ipcRenderer.invoke(IPC.AI.GET_MESSAGES, conversationId),
+
+    deleteConversation: (id: string): Promise<IPCResult<null>> =>
+      ipcRenderer.invoke(IPC.AI.DELETE_CONVERSATION, id),
+
+    deleteAllConversations: (): Promise<IPCResult<null>> =>
+      ipcRenderer.invoke(IPC.AI.DELETE_ALL_CONVERSATIONS),
+
+    archiveConversation: (id: string, archived: boolean): Promise<IPCResult<null>> =>
+      ipcRenderer.invoke(IPC.AI.ARCHIVE_CONVERSATION, { id, archived }),
+
+    getUsageFraction: (): Promise<IPCResult<UsageFraction>> =>
+      ipcRenderer.invoke(IPC.AI.GET_USAGE_FRACTION),
+
+    getUsageHistory: (provider?: string): Promise<IPCResult<AIUsage[]>> =>
+      ipcRenderer.invoke(IPC.AI.GET_USAGE_HISTORY, provider),
+
+    getPreferences: (): Promise<IPCResult<Record<string, string>>> =>
+      ipcRenderer.invoke(IPC.AI.GET_AI_PREFERENCES),
+
+    setPreference: (key: string, value: string): Promise<IPCResult<null>> =>
+      ipcRenderer.invoke(IPC.AI.SET_AI_PREFERENCE, { key, value }),
+
+    getSkins: (): Promise<IPCResult<MascotSkin[]>> =>
+      ipcRenderer.invoke(IPC.AI.GET_SKINS),
+  },
+
+  // ─── PDF intelligence ──────────────────────────────────────────────────────
+  pdf: {
+    pick: (): Promise<IPCResult<PDFPickResult | null>> =>
+      ipcRenderer.invoke(IPC.PDF.PICK),
+    analyzeFillable: (payload: { filePath: string; mode: 'autofill' | 'help' }): Promise<IPCResult<PDFProposal>> =>
+      ipcRenderer.invoke(IPC.PDF.ANALYZE_FILLABLE, payload),
+    answer: (payload: PDFAnswerPayload): Promise<IPCResult<string[]>> =>
+      ipcRenderer.invoke(IPC.PDF.ANSWER, payload),
+    visionAnswer: (payload: PDFVisionPayload): Promise<IPCResult<PDFVisionAnchor[]>> =>
+      ipcRenderer.invoke(IPC.PDF.VISION_ANSWER, payload),
+    stamp: (payload: PDFStampPayload): Promise<IPCResult<{ path: string }>> =>
+      ipcRenderer.invoke(IPC.PDF.STAMP, payload),
+    confirmApply: (payload: PDFConfirmPayload): Promise<IPCResult<{ path: string }>> =>
+      ipcRenderer.invoke(IPC.PDF.CONFIRM_APPLY, payload),
+    open: (filePath: string): Promise<IPCResult<null>> =>
+      ipcRenderer.invoke(IPC.PDF.OPEN, filePath),
+    reveal: (filePath: string): Promise<IPCResult<null>> =>
+      ipcRenderer.invoke(IPC.PDF.REVEAL, filePath),
   },
 
   // ─── Grade Rescue Mode ───────────────────────────────────────────────────

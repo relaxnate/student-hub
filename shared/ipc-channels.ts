@@ -7,6 +7,7 @@ export const IPC = {
   AUTH: {
     START_OAUTH:          'auth:start-oauth',
     CONNECT_WITH_TOKEN:   'auth:connect-with-token',
+    CONNECT_CALENDAR_FEED:'auth:connect-calendar-feed',
     OAUTH_CALLBACK:       'auth:oauth-callback',
     LOGOUT:               'auth:logout',
     GET_INTEGRATIONS:     'auth:get-integrations',
@@ -140,6 +141,60 @@ export const IPC = {
     UPLOAD_ASSET:         'widgets:upload-asset',     // opens file dialog, copies into userData → UserWidgetAsset
     GET_ASSETS:           'widgets:get-assets',       // → UserWidgetAsset[]
     DELETE_ASSET:         'widgets:delete-asset',     // id (also removes the copied file)
+  },
+
+  // AI Helper (multi-provider AI gateway, schema v7)
+  AI: {
+    // Provider / key management
+    GET_PROVIDERS:            'ai:get-providers',
+    GET_MODELS:               'ai:get-models',
+    SAVE_KEY:                 'ai:save-key',
+    DELETE_KEY:               'ai:delete-key',
+    VALIDATE_KEY:             'ai:validate-key',
+
+    // Chat streaming (renderer → main)
+    START_STREAM:             'ai:start-stream',
+    CANCEL_STREAM:            'ai:cancel-stream',
+    APPLY_FILE_EDIT:          'ai:apply-file-edit',   // confirm + write a proposed file edit
+
+    // Streaming events (main → renderer), keyed by streamId
+    STREAM_CHUNK:             'ai:stream-chunk',
+    STREAM_DONE:              'ai:stream-done',
+    STREAM_ERROR:             'ai:stream-error',
+    STREAM_TOOL_CALL:         'ai:stream-tool-call',
+    STREAM_TOOL_RESULT:       'ai:stream-tool-result',
+
+    // Conversations
+    GET_CONVERSATIONS:        'ai:get-conversations',
+    GET_CONVERSATION:         'ai:get-conversation',
+    GET_MESSAGES:             'ai:get-messages',
+    DELETE_CONVERSATION:      'ai:delete-conversation',
+    DELETE_ALL_CONVERSATIONS: 'ai:delete-all-conversations',
+    ARCHIVE_CONVERSATION:     'ai:archive-conversation',
+
+    // Usage
+    GET_USAGE_FRACTION:       'ai:get-usage-fraction',
+    GET_USAGE_HISTORY:        'ai:get-usage-history',
+
+    // Preferences
+    GET_AI_PREFERENCES:       'ai:get-preferences',
+    SET_AI_PREFERENCE:        'ai:set-preference',
+
+    // Mascot
+    GET_SKINS:                'ai:get-skins',
+  },
+
+  // PDF intelligence (AI Helper Phase 4)
+  PDF: {
+    ANALYZE:       'pdf:analyze',          // pick + detect + (fillable) AI-answer → proposal
+    PICK:          'pdf:pick',             // pick a PDF, detect kind, return bytes (renderer analyses flat PDFs)
+    ANALYZE_FILLABLE: 'pdf:analyze-fillable', // (filePath) → fillable field answers
+    ANSWER:        'pdf:answer',           // (questions[]) → answers[] from the active AI provider
+    VISION_ANSWER: 'pdf:vision-answer',    // (page image) → answers + anchor coords (scanned pages)
+    STAMP:         'pdf:stamp',            // write stamped placements onto a flat PDF → NEW file
+    CONFIRM_APPLY: 'pdf:confirm-apply',    // write the filled fillable-form PDF to a NEW file
+    OPEN:          'pdf:open',             // open a saved output in the OS viewer
+    REVEAL:        'pdf:reveal',           // reveal a saved output in the file explorer
   },
 
   // Grade Rescue Mode

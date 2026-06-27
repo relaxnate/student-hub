@@ -45,6 +45,8 @@
     "cmdk": "^1.1.1",
     "date-fns": "^3.3.1",
     "electron-updater": "^6.1.7",
+    "pdf-lib": "^1.17.1",
+    "pdfjs-dist": "^4.7.76",
     "react-draggable": "^4.7.0",
     "react-grid-layout": "^1.5.0"
   },
@@ -98,7 +100,11 @@
       "node_modules/file-uri-to-path/**/*",
       "node_modules/@electron-toolkit/utils/**/*",
       "node_modules/date-fns/**/*",
-      "node_modules/electron-updater/**/*"
+      "node_modules/electron-updater/**/*",
+      "node_modules/pdf-lib/**/*",
+      "node_modules/@pdf-lib/**/*",
+      "node_modules/pako/**/*",
+      "node_modules/tslib/**/*"
     ],
     "asarUnpack": [
       "node_modules/better-sqlite3/**/*",

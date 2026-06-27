@@ -4,6 +4,7 @@ import { CanvasAdapter } from './canvas/CanvasAdapter'
 import { GoogleClassroomAdapter } from './google-classroom/GoogleClassroomAdapter'
 import { MicrosoftTeamsAdapter } from './microsoft-teams/MicrosoftTeamsAdapter'
 import { MoodleAdapter } from './moodle/MoodleAdapter'
+import { IcsCalendarAdapter } from './ics/IcsCalendarAdapter'
 import { getProviderOAuth } from './oauth-config'
 
 const adapters = new Map<string, IntegrationAdapter>()
@@ -28,6 +29,11 @@ export function createAdapter(
     // Moodle: token + base URL (like Canvas's PAT), connected via connectWithToken.
     case 'moodle':
       return new MoodleAdapter(baseUrl)
+
+    // Calendar feed (.ics): baseUrl IS the feed URL; the same URL is also stored
+    // as the token, so it's available whether restored from base_url or token.
+    case 'ics-calendar':
+      return new IcsCalendarAdapter(baseUrl)
 
     // Higher-friction platforms (deferred — see 06 - Research/Additional Platforms Notes):
     // case 'blackboard':  return new BlackboardAdapter(baseUrl, clientId)  // OAuth2 3LO + Anthology portal app

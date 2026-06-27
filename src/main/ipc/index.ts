@@ -12,6 +12,8 @@ import { registerExportHandlers } from './export.handlers'
 import { registerSimulationHandlers } from './simulation.handlers'
 import { registerReminderHandlers } from './reminders.handlers'
 import { registerWidgetHandlers } from './widgets.handlers'
+import { registerAIHandlers } from './ai.handlers'
+import { registerPdfHandlers } from './pdf.handlers'
 import { getDb } from '../database'
 import type { NotificationService } from '../services/notifications/NotificationService'
 import type { AppPreferences } from '@shared/types/ipc'
@@ -87,6 +89,8 @@ export function registerAllHandlers(oauthManager: OAuthManager, notifications: N
   registerSimulationHandlers()
   registerReminderHandlers(notifications)
   registerWidgetHandlers()
+  registerAIHandlers()
+  registerPdfHandlers()
 
   // ─── App / Window ─────────────────────────────────────────────────────
   ipcMain.handle(IPC.APP.GET_VERSION, () => ({ ok: true, data: app.getVersion() }))

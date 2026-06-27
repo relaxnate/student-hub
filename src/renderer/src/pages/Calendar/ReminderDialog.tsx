@@ -4,7 +4,7 @@ import { X, Bell, Trash2 } from 'lucide-react'
 import { api } from '../../lib/ipc'
 import { cn } from '../../lib/utils'
 import { Button } from '../../components/ui/Button'
-import { Select } from '../../components/ui/Controls'
+import { CustomSelect } from '../../components/ui/CustomSelect'
 import type { Reminder, ReminderRepeat, CreateReminderInput } from '@shared/types/entities'
 
 // "Notify me" presets → minutes before the event.
@@ -155,10 +155,10 @@ export default function ReminderDialog({ open, onOpenChange, defaultDate, editin
 
             <div>
               <label className={labelCls}>Notify me</label>
-              <Select
-                value={minutesBefore}
-                onChange={(e) => setMinutesBefore(Number(e.target.value))}
-                options={NOTIFY_OPTIONS.map((o) => ({ value: o.minutes, label: o.label }))}
+              <CustomSelect
+                value={String(minutesBefore)}
+                onChange={(v) => setMinutesBefore(Number(v))}
+                options={NOTIFY_OPTIONS.map((o) => ({ value: String(o.minutes), label: o.label }))}
               />
               {!time && (
                 <p className="text-[11px] text-zinc-600 mt-1">All-day reminders notify relative to 9:00 AM.</p>

@@ -12,7 +12,9 @@ import {
 import { cn } from '../../lib/utils'
 import { Button } from '../../components/ui/Button'
 import { Switch } from '../../components/ui/Controls'
+import { CustomSelect } from '../../components/ui/CustomSelect'
 import { InstitutionAvatar } from '../../components/ui/InstitutionAvatar'
+import { AISettingsSection } from '../../components/ai/AISettingsSection'
 import { AddPlatform } from '../../components/integrations/AddPlatform'
 import type { Integration, IntegrationProvider } from '@shared/types/entities'
 import type {
@@ -23,11 +25,12 @@ import type {
 } from '@shared/types/ipc'
 import { format } from 'date-fns'
 
-type Section = 'general' | 'integrations' | 'appearance' | 'background' | 'effects' | 'accessibility' | 'layout' | 'workspace' | 'notifications' | 'sync' | 'about'
+type Section = 'general' | 'integrations' | 'ai-helper' | 'appearance' | 'background' | 'effects' | 'accessibility' | 'layout' | 'workspace' | 'notifications' | 'sync' | 'about'
 
 const SECTIONS: { id: Section; label: string; icon: React.ReactNode }[] = [
   { id: 'general',       label: 'General',       icon: <Settings2 size={14} /> },
   { id: 'integrations',  label: 'Integrations',  icon: <Link2 size={14} /> },
+  { id: 'ai-helper',     label: 'AI Helper',     icon: <Sparkles size={14} /> },
   { id: 'appearance',    label: 'Appearance',    icon: <Palette size={14} /> },
   { id: 'background',    label: 'Background',    icon: <Image size={14} /> },
   { id: 'effects',       label: 'Effects',       icon: <Sparkles size={14} /> },
@@ -48,6 +51,7 @@ const PROVIDER_META: Record<IntegrationProvider, { name: string; color: string }
   'schoology':        { name: 'Schoology',         color: '#1A5276' },
   'google-calendar':  { name: 'Google Calendar',   color: '#4285F4' },
   'outlook-calendar': { name: 'Outlook Calendar',  color: '#0078D4' },
+  'ics-calendar':     { name: 'Calendar Feed',      color: '#0EA5E9' },
 }
 
 export default function Settings() {
@@ -99,6 +103,7 @@ export default function Settings() {
           {section === 'integrations' && (
             <IntegrationsSection integrations={integrations} onDisconnect={handleDisconnect} onAdd={addIntegration} />
           )}
+          {section === 'ai-helper' && <AISettingsSection />}
           {section === 'appearance' && appearance && (
             <AppearanceSection appearance={appearance} onAppearance={setAppearance} />
           )}
@@ -1083,10 +1088,12 @@ function WorkspaceSection({ appearance, onAppearance }: {
           <div key={p.id}>
             {editing === p.id ? (
               <div className="flex items-center gap-2 p-3 rounded-lg border border-accent-500/40 bg-accent-500/8">
-                <select value={editIcon} onChange={e => setEditIcon(e.target.value)}
-                  className="bg-surface-700 border border-white/10 rounded text-sm px-1.5 py-1 focus:outline-none">
-                  {EMOJI_OPTIONS.map(e => <option key={e} value={e}>{e}</option>)}
-                </select>
+                <CustomSelect
+                  value={editIcon}
+                  onChange={setEditIcon}
+                  options={EMOJI_OPTIONS.map(e => ({ value: e, label: e }))}
+                  className="w-24"
+                />
                 <input value={editName} onChange={e => setEditName(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter') confirmEdit() }}
                   autoFocus
@@ -1129,10 +1136,12 @@ function WorkspaceSection({ appearance, onAppearance }: {
         {/* Create new */}
         {creating ? (
           <div className="flex items-center gap-2 p-3 rounded-lg border border-accent-500/40 bg-accent-500/8">
-            <select value={newIcon} onChange={e => setNewIcon(e.target.value)}
-              className="bg-surface-700 border border-white/10 rounded text-sm px-1.5 py-1 focus:outline-none">
-              {EMOJI_OPTIONS.map(e => <option key={e} value={e}>{e}</option>)}
-            </select>
+            <CustomSelect
+              value={newIcon}
+              onChange={setNewIcon}
+              options={EMOJI_OPTIONS.map(e => ({ value: e, label: e }))}
+              className="w-24"
+            />
             <input value={newName} onChange={e => setNewName(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') confirmCreate() }}
               placeholder="Workspace name..."
@@ -1185,11 +1194,13 @@ function NotificationsSection({ prefs, onSave }: { prefs: AppPreferences; onSave
         value={prefs.notificationsEnabled} onChange={v => onSave({ notificationsEnabled: v })} />
       <div>
         <p className="text-xs font-medium text-zinc-400 mb-1.5">Reminder lead time</p>
-        <select value={prefs.notificationAdvanceHours} onChange={e => onSave({ notificationAdvanceHours: Number(e.target.value) })}
+        <CustomSelect
+          value={String(prefs.notificationAdvanceHours)}
+          onChange={v => onSave({ notificationAdvanceHours: Number(v) })}
           disabled={!prefs.notificationsEnabled}
-          className="bg-surface-700 border border-white/10 rounded-md text-sm text-zinc-300 px-3 py-1.5 focus:outline-none disabled:opacity-40">
-          {[12, 24, 48, 72].map(h => <option key={h} value={h}>{h} hours before due date</option>)}
-        </select>
+          options={[12, 24, 48, 72].map(h => ({ value: String(h), label: `${h} hours before due date` }))}
+          className="w-56"
+        />
       </div>
     </div>
   )
@@ -1220,10 +1231,15 @@ function SyncSection({ prefs, onSave }: { prefs: AppPreferences; onSave: (p: Par
         <p className="text-sm text-zinc-500">Configure sync behaviour and Obsidian export.</p></div>
       <div>
         <p className="text-xs font-medium text-zinc-400 mb-1.5">Auto-sync interval</p>
-        <select value={prefs.syncIntervalMinutes} onChange={e => onSave({ syncIntervalMinutes: Number(e.target.value) })}
-          className="bg-surface-700 border border-white/10 rounded-md text-sm text-zinc-300 px-3 py-1.5 focus:outline-none">
-          {[15, 30, 60, 120, 360].map(m => <option key={m} value={m}>Every {m < 60 ? `${m} min` : `${m / 60}h`}</option>)}
-        </select>
+        <CustomSelect
+          value={String(prefs.syncIntervalMinutes)}
+          onChange={v => onSave({ syncIntervalMinutes: Number(v) })}
+          options={[15, 30, 60, 120, 360].map(m => ({
+            value: String(m),
+            label: `Every ${m < 60 ? `${m} min` : `${m / 60}h`}`,
+          }))}
+          className="w-44"
+        />
       </div>
       <div className="rounded-xl bg-surface-800 border border-white/5 p-4 space-y-3">
         <div className="flex items-center gap-2">

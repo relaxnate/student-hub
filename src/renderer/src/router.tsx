@@ -20,6 +20,7 @@ const Files            = lazy(() => import('./pages/Files/Files'))
 const GradeRescue      = lazy(() => import('./pages/GradeRescue/GradeRescue'))
 const History          = lazy(() => import('./pages/History/History'))
 const Settings         = lazy(() => import('./pages/Settings/Settings'))
+const AIHelper         = lazy(() => import('./pages/AIHelper/AIHelper'))
 
 export function LazyPage({ children }: { children: React.ReactNode }) {
   return (
@@ -42,6 +43,7 @@ export const PAGE_ROUTES: RouteObject[] = [
   { path: 'modules',               element: <LazyPage><Modules /></LazyPage> },
   { path: 'assignments',           element: <LazyPage><Assignments /></LazyPage> },
   { path: 'assignments/:id',       element: <LazyPage><AssignmentDetail /></LazyPage> },
+  { path: 'ai-helper',             element: <LazyPage><AIHelper /></LazyPage> },
   { path: 'pages/:courseId/:url',  element: <LazyPage><PageViewer /></LazyPage> },
   { path: 'quizzes/:id',           element: <LazyPage><QuizDetail /></LazyPage> },
   { path: 'grades',                element: <LazyPage><CurrentGrades /></LazyPage> },

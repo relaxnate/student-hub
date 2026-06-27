@@ -156,6 +156,19 @@ export abstract class IntegrationAdapter {
         throw new RateLimitError(retryAfterMs)
       }
 
+      // Canvas signals request throttling with **403 (Rate Limit Exceeded)**, NOT
+      // 429 (its leaky-bucket quota is exhausted). This is transient — back off and
+      // retry. Crucially, this must be distinguished from a genuine permission 403:
+      // the SyncEngine treats permission-403s as "expected restriction" and SILENTLY
+      // drops that course's data, so a throttle misread as a permission error would
+      // lose real grades/assignments with no retry and no warning (worse for students
+      // with many courses, who hit the quota soonest). On exhaustion we throw
+      // RateLimitError so the sync stops cleanly with a "try again" message instead.
+      if (response.status === 403 && await this.isThrottleResponse(response)) {
+        if (attempt < maxAttempts) { await this.sleep(this.backoffMs(attempt)); continue }
+        throw new RateLimitError(this.backoffMs(attempt))
+      }
+
       // Transient server errors — worth another try.
       if (response.status >= 500 && attempt < maxAttempts) {
         await this.sleep(this.backoffMs(attempt))
@@ -163,6 +176,23 @@ export abstract class IntegrationAdapter {
       }
 
       return response
+    }
+  }
+
+  /**
+   * Whether a 403 is Canvas's rate-limit throttle (vs. a real permission denial).
+   * Canvas exhausts a per-token "leaky bucket" and returns 403 with the body
+   * "403 Forbidden (Rate Limit Exceeded)" and an `X-Rate-Limit-Remaining: 0`
+   * header. We check the header first (cheap) and fall back to peeking a CLONE of
+   * the body so the original response stays readable for a genuine-permission 403.
+   */
+  private async isThrottleResponse(response: Response): Promise<boolean> {
+    const remaining = response.headers.get('X-Rate-Limit-Remaining')
+    if (remaining !== null && parseFloat(remaining) <= 0) return true
+    try {
+      return /rate limit exceeded/i.test(await response.clone().text())
+    } catch {
+      return false
     }
   }
 
@@ -206,8 +236,18 @@ export abstract class IntegrationAdapter {
   ): Promise<T[]> {
     const results: T[] = []
     let nextUrl: string | null = `${this.baseUrl}${initialPath}`
+    // Safety cap: a malformed/cyclic Link header must never loop forever. At
+    // per_page=100 this still allows up to 50,000 items per resource — far beyond
+    // any real course — while bounding a pathological response.
+    const MAX_PAGES = 500
+    const seen = new Set<string>()
+    let pages = 0
 
-    while (nextUrl) {
+    while (nextUrl && pages < MAX_PAGES) {
+      if (seen.has(nextUrl)) break   // Canvas returned a self-referential "next" — stop.
+      seen.add(nextUrl)
+      pages++
+
       const response = await this.fetchWithRetry(nextUrl, {
         ...options,
         headers: {
@@ -224,7 +264,7 @@ export abstract class IntegrationAdapter {
       }
 
       const page = await response.json() as T[]
-      results.push(...page)
+      if (Array.isArray(page)) results.push(...page)
 
       // Parse Link header: <https://...>; rel="next"
       const linkHeader = response.headers.get('Link') ?? ''

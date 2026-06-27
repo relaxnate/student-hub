@@ -1,7 +1,5 @@
-import crypto from 'crypto'
 import { IntegrationAdapter } from '../base/IntegrationAdapter'
 import type { OAuthConfig, TokenResponse } from '../base/IntegrationAdapter'
-import { ParseError } from '../base/errors'
 import type {
   Course,
   Module,
@@ -173,14 +171,31 @@ export class CanvasAdapter extends IntegrationAdapter {
     // course → no grades appear anywhere, and past courses (which rely solely on
     // currentScore) show nothing. Some Canvas instances happen to return the
     // scores anyway, which is why this only failed for some schools.
+    // include[]=current_grading_period_scores adds the per-grading-period score
+    // fields to each enrollment. K-12 districts almost universally use grading
+    // periods (quarters/semesters), and the student's Canvas gradebook DEFAULTS to
+    // the CURRENT period's grade — so without this the app would show the
+    // whole-course total, which often differs from what the student sees.
     const raw = await this.requestPaginated<CanvasCourse>(
       '/api/v1/courses?enrollment_state[]=active&enrollment_state[]=completed' +
-      '&include[]=term&include[]=enrollments&include[]=total_scores&per_page=50'
+      '&include[]=term&include[]=enrollments&include[]=total_scores' +
+      '&include[]=current_grading_period_scores&per_page=100'
     )
 
     // Keep the raw list and the normalized list index-aligned so the second
     // pass can inspect each course's raw dates.
-    const kept    = raw.filter(c => c.workflow_state !== 'deleted')
+    //
+    // Drop courses we can't actually use (BUG-017): Canvas returns a stub object
+    // with no `name` for (a) deleted courses and (b) courses the student can't
+    // currently access (access_restricted_by_date, or otherwise nameless). These
+    // have no grades/assignments to show and would violate the NOT NULL constraint
+    // on courses.name, failing the whole sync ("NOT NULL constraint failed:
+    // courses.name").
+    const kept    = raw.filter(c =>
+      c.workflow_state !== 'deleted' &&
+      !c.access_restricted_by_date &&
+      typeof c.name === 'string' && c.name.trim() !== ''
+    )
     const courses = kept.map(c => this.normalizeCourse(c))
 
     // ── Second pass: relative-recency downgrade (DATELESS courses only) ─────
@@ -279,10 +294,12 @@ export class CanvasAdapter extends IntegrationAdapter {
     // Diagnostic: record the enrollment type we matched and flag a null official
     // score, so a future "no grades" report can be confirmed from the installed
     // app's log file without dev tools.
-    if (studentEnrollment && studentEnrollment.computed_current_score == null) {
+    if (studentEnrollment
+        && studentEnrollment.computed_current_score == null
+        && studentEnrollment.current_period_computed_current_score == null) {
       logDebug(
         `[CanvasAdapter] course ${raw.id} "${raw.name}": matched enrollment ` +
-        `type="${studentEnrollment.type}" but computed_current_score is null`
+        `type="${studentEnrollment.type}" but both total and current-period scores are null`
       )
     }
 
@@ -341,11 +358,26 @@ export class CanvasAdapter extends IntegrationAdapter {
       isActive = !enrollmentConcluded && !termLooksArchival
     }
 
+    // ── Pick the grade that matches what the student SEES ──────────────────
+    // When Multiple Grading Periods is enabled (current_grading_period_id is
+    // present), the student's gradebook defaults to the CURRENT period's grade,
+    // not the whole-course total. Prefer the current-period score when it's
+    // populated, and fall back to the course total otherwise (no MGP, or no
+    // graded work in the period yet) so we never blank out a grade we do have.
+    const e = studentEnrollment
+    const hasPeriod = e?.current_grading_period_id != null
+    const periodScore = e?.current_period_computed_current_score
+    const periodGrade = e?.current_period_computed_current_grade
+    const currentScore = hasPeriod && periodScore != null ? periodScore : (e?.computed_current_score ?? null)
+    const currentGrade = hasPeriod && periodGrade != null ? periodGrade : (e?.computed_current_grade ?? null)
+
     return {
       id:           `canvas-course-${raw.id}`,
       integrationId: '',   // filled in by SyncEngine after auth
       externalId:   String(raw.id),
-      name:         raw.name,
+      // Nameless courses are filtered out before we get here, but fall back
+      // defensively so we can never write a NULL into courses.name (BUG-017).
+      name:         raw.name?.trim() || raw.course_code || `Course ${raw.id}`,
       courseCode:   raw.course_code || null,
       description:  raw.public_description ?? raw.syllabus_body ?? null,
       color:        null,  // assigned locally
@@ -353,8 +385,8 @@ export class CanvasAdapter extends IntegrationAdapter {
       startDate:    raw.start_at ? new Date(raw.start_at).getTime() : null,
       endDate:      raw.end_at   ? new Date(raw.end_at).getTime()   : null,
       isActive,
-      currentScore: studentEnrollment?.computed_current_score ?? null,
-      currentGrade: studentEnrollment?.computed_current_grade ?? null,
+      currentScore,
+      currentGrade,
       applyGroupWeights: raw.apply_assignment_group_weights ?? false,
       syncedAt:     Date.now(),
     }
@@ -369,7 +401,7 @@ export class CanvasAdapter extends IntegrationAdapter {
     // gives us item-level completion state anyway). Dropping the unused
     // include also trims the response payload.
     const raw = await this.requestPaginated<CanvasModule>(
-      `/api/v1/courses/${externalCourseId}/modules?per_page=50`
+      `/api/v1/courses/${externalCourseId}/modules?per_page=100`
     )
     return raw.map(m => this.normalizeModule(m, courseId))
   }
@@ -399,7 +431,7 @@ export class CanvasAdapter extends IntegrationAdapter {
     externalModuleId: string
   ): Promise<ModuleItem[]> {
     const raw = await this.requestPaginated<CanvasModuleItem>(
-      `/api/v1/courses/${externalCourseId}/modules/${externalModuleId}/items?include[]=content_details&per_page=50`
+      `/api/v1/courses/${externalCourseId}/modules/${externalModuleId}/items?include[]=content_details&per_page=100`
     )
     return raw.map(item => this.normalizeModuleItem(item, moduleId, courseId))
   }
@@ -450,7 +482,7 @@ export class CanvasAdapter extends IntegrationAdapter {
 
   async fetchAssignmentGroups(courseId: string, externalCourseId: string): Promise<AssignmentGroup[]> {
     const raw = await this.requestPaginated<CanvasAssignmentGroup>(
-      `/api/v1/courses/${externalCourseId}/assignment_groups?per_page=50`
+      `/api/v1/courses/${externalCourseId}/assignment_groups?per_page=100`
     )
     return raw.map(g => this.normalizeAssignmentGroup(g, courseId))
   }
@@ -479,7 +511,7 @@ export class CanvasAdapter extends IntegrationAdapter {
     // a problem fetching one doesn't block the other (SyncEngine also
     // isolates them per-phase regardless).
     const raw = await this.requestPaginated<CanvasAssignment>(
-      `/api/v1/courses/${externalCourseId}/assignments?include[]=attachments&per_page=50`
+      `/api/v1/courses/${externalCourseId}/assignments?include[]=attachments&per_page=100`
     )
 
     const assignments: Assignment[] = []
@@ -551,7 +583,7 @@ export class CanvasAdapter extends IntegrationAdapter {
   async fetchFiles(courseId: string, externalCourseId: string): Promise<CourseFile[]> {
     // First build the folder-path map so we can reconstruct the tree
     const folders = await this.requestPaginated<CanvasFolder>(
-      `/api/v1/courses/${externalCourseId}/folders?per_page=50`
+      `/api/v1/courses/${externalCourseId}/folders?per_page=100`
     )
     const folderMap = new Map<number, string>()
     for (const f of folders) {
@@ -561,7 +593,7 @@ export class CanvasAdapter extends IntegrationAdapter {
     }
 
     const raw = await this.requestPaginated<CanvasFile>(
-      `/api/v1/courses/${externalCourseId}/files?per_page=50`
+      `/api/v1/courses/${externalCourseId}/files?per_page=100`
     )
 
     return raw
@@ -589,7 +621,7 @@ export class CanvasAdapter extends IntegrationAdapter {
 
   async fetchPages(courseId: string, externalCourseId: string): Promise<CoursePage[]> {
     const raw = await this.requestPaginated<CanvasPage>(
-      `/api/v1/courses/${externalCourseId}/pages?published=true&per_page=50`
+      `/api/v1/courses/${externalCourseId}/pages?published=true&per_page=100`
     )
 
     return raw.map(p => ({
@@ -609,7 +641,7 @@ export class CanvasAdapter extends IntegrationAdapter {
 
   async fetchQuizzes(courseId: string, externalCourseId: string): Promise<Quiz[]> {
     const raw = await this.requestPaginated<CanvasQuiz>(
-      `/api/v1/courses/${externalCourseId}/quizzes?per_page=50`
+      `/api/v1/courses/${externalCourseId}/quizzes?per_page=100`
     )
 
     return raw
@@ -651,7 +683,7 @@ export class CanvasAdapter extends IntegrationAdapter {
     // unconfirmed shorthand.
     const raw = await this.requestPaginated<CanvasSubmission>(
       `/api/v1/courses/${externalCourseId}/students/submissions` +
-      `?include[]=submission_comments&include[]=assignment&per_page=50`
+      `?include[]=submission_comments&include[]=assignment&per_page=100`
     )
 
     return raw
@@ -704,7 +736,7 @@ export class CanvasAdapter extends IntegrationAdapter {
       html_url: string
       context_code: string
       location_name?: string | null
-    }>(`/api/v1/calendar_events?type=event${contextFilter}&per_page=50`)
+    }>(`/api/v1/calendar_events?type=event${contextFilter}&per_page=100`)
 
     return raw.map(e => ({
       id:            `canvas-event-${e.id}`,
