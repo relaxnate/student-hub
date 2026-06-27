@@ -12,11 +12,14 @@ permissions:
 
 jobs:
   release-windows:
-    # windows-latest is the recommended runner for building Windows Electron
-    # installers (NSIS + portable). Native modules (better-sqlite3) are rebuilt
-    # for Electron's ABI by the `postinstall` electron-rebuild hook during
-    # `npm ci`, then electron-builder's own rebuild step verifies them.
-    runs-on: windows-latest
+    # Pinned to windows-2022 (Visual Studio 2022). As of 2026-06, `windows-latest`
+    # migrated to a Visual Studio 2026 image (internal major version 18); the
+    # node-gyp bundled with electron-rebuild/npm does not recognize VS 18 and
+    # fails with "Could not find any Visual Studio installation to use" during the
+    # postinstall better-sqlite3 rebuild (broke the v1.2.1 release — see BUG-020).
+    # VS 2022 (major 17) is recognized and is the exact toolchain that shipped
+    # v1.0.0–v1.2.0. Revisit windows-latest once node-gyp gains VS 2026 support.
+    runs-on: windows-2022
 
     steps:
       - name: Checkout

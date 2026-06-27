@@ -81,6 +81,7 @@
     "appId": "com.studenthub.app",
     "productName": "Student Hub",
     "copyright": "Copyright © 2026 Student Hub",
+    "npmRebuild": false,
     "publish": [
       {
         "provider": "github",
